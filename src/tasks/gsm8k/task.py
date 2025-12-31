@@ -22,7 +22,7 @@ def parse_gsm8k_answer(output: Any) -> str:
     Robust parser optimized for English Math Datasets (GSM8K).
     
     It extracts the final numerical answer from the model's output, handling:
-    - Case-insensitive 'Answer:' markers.
+    - Integers inside LaTeX (e.g., \boxed{15})
     - Thousands separators (e.g., 1,000).
     - Trailing punctuation (e.g., 16.).
     - AdalFlow GeneratorOutput objects or raw strings.
@@ -33,8 +33,7 @@ def parse_gsm8k_answer(output: Any) -> str:
     Returns:
         str: The extracted number as a string, or empty string if not found.
     """
-    # 1. Safe Text Extraction
-    # Handle cases where AdalFlow passes a wrapper object or a raw string
+    # Get Text
     text = ""
     if hasattr(output, "data"):
         text = output.data if output.data else ""
@@ -44,33 +43,17 @@ def parse_gsm8k_answer(output: Any) -> str:
     if not text:
         return ""
 
-    # 2. Isolate the Final Answer
-    # We use re.split with IGNORECASE to split by "Answer:", "answer:", "ANSWER:", etc.
-    # This returns a list. We take the LAST element (parts[-1]) to ensure we get
-    # the final conclusion, ignoring intermediate reasoning steps that might mention "Answer".
-    # If "Answer:" is not found, it returns the whole string (allowing fallback search).
-    parts = re.split(r"Answer:", text, flags=re.IGNORECASE)
-    candidate = parts[-1]
+    # Clean Commas
+    clean_text = text.replace(",", "")
 
-    # 3. Clean Commas (Standardize Number Format)
-    # GSM8K uses commas as thousand separators (e.g., 600,000).
-    # Regex logic usually breaks at commas, so we remove them to treat '600000' as a single token.
-    clean_candidate = candidate.replace(",", "")
+    # Find ALL numbers
+    # Matches optional negative sign, digits, and optional decimal part
+    numbers = re.findall(r"-?\d+\.?\d*", clean_text)
 
-    # 4. Extract Number via Regex
-    # Matches: 
-    #  - Optional negative sign (-?)
-    #  - One or more digits (\d+)
-    #  - Optional decimal part (\.?\d*)
-    match = re.search(r"(-?\d+\.?\d*)", clean_candidate)
-
-    if match:
-        result = match.group(1)
-        # 5. Remove trailing dot
-        # If the model output "Answer: 16.", the regex captures "16.".
-        # We strip the dot to ensure exact match with Ground Truth "16".
-        return result.rstrip(".")
-
+    # Return the last one found
+    if numbers:
+        return numbers[-1].rstrip(".")
+    
     return ""
 
 # -----------------------------------------------------------------------------
