@@ -67,12 +67,17 @@ TEACHER_MODEL_KWARGS = {
 # Max Steps: How many optimization iterations (generations) to run.
 MAX_STEPS = 2  
 
-# Train Batch Size: 
-# Set to 1 for "Stochastic" updates (update prompt after every sample).
-# Helps avoid OOM on Colab and keeps the context window for the Teacher manageable.
+# Train Batch Size (Optimization Logic):
+# Determines how many training samples are accumulated before the Optimizer performs an update.
+# - If set to 1 (Stochastic Mode): The Teacher critiques a single sample. If incorrect, 
+# it proposes an immediate prompt update. Best for fast, granular adaptation.
+# - If set > 1 (Mini-Batch Mode): The Teacher aggregates feedback from N samples 
+# and proposes one holistic update. Best for stability, but requires a larger context window.
 TRAIN_BATCH_SIZE = 1
 
-# Validation Batch Size:
-# Number of inference requests to run during validation.
-# Keep it low to minimize VRAM usage on T4 GPUs.
+# Validation Batch Size (Hardware Execution):
+# Strictly controls inference throughput and VRAM usage during the evaluation phase.
+# - Unlike Train Batch Size, this does NOT affect the optimization logic or results.
+# - It simply defines how many validation queries are processed in parallel on the GPU.
+# Keep it low for T4 GPUs to prevent Out-Of-Memory (OOM) errors.
 VAL_BATCH_SIZE = 1
