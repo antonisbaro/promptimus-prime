@@ -18,9 +18,8 @@ cache_datasets/
 
 # Outputs & Checkpoints
 outputs/*
-!outputs/.gitkeep
-*.ckpt
-*.json
+!outputs/**/
+!**/.gitkeep
 
 # IDE specific files
 .idea/
