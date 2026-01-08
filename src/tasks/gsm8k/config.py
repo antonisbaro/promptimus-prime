@@ -39,9 +39,9 @@ SEED = 42
 
 # NOTE: Keep these numbers small for Google Colab Free Tier (T4 GPU).
 # Increase them if running on stronger hardware (e.g., A100).
-TRAIN_SIZE = 10   # Number of samples for the optimization loop
-VAL_SIZE = 5      # Number of samples for validating new prompts during training
-TEST_SIZE = 10    # Number of samples for the final 'evaluate.py' report
+TRAIN_SIZE = 25   # Number of samples for the optimization loop
+VAL_SIZE = 25      # Number of samples for validating new prompts during training
+TEST_SIZE = 50    # Number of samples for the final 'evaluate.py' report
 
 # -----------------------------------------------------------------------------
 # MODEL CONFIGURATION
@@ -66,10 +66,10 @@ STUDENT_MODEL_KWARGS = {
 }
 
 # Teacher Parameters:
-# - Temperature 0.7: Slightly higher to allow diversity in proposing NEW prompts.
+# - Temperature 0.4: Slightly lower to reduce hallucinations/leakage.
 # - max_new_tokens 2048: Needs space to explain the error (gradient) and rewrite the prompts.
 TEACHER_MODEL_KWARGS = {
-    "temperature": 0.7,
+    "temperature": 0.4,
     "max_new_tokens": 2048,
 }
 
@@ -77,7 +77,7 @@ TEACHER_MODEL_KWARGS = {
 # TRAINING / OPTIMIZATION HYPERPARAMETERS
 # -----------------------------------------------------------------------------
 # Max Steps: How many optimization iterations (generations) to run.
-MAX_STEPS = 2  
+MAX_STEPS = 10  
 
 # Train Batch Size (Optimization Logic):
 # Determines how many training samples are accumulated before the Optimizer performs an update.
@@ -85,11 +85,11 @@ MAX_STEPS = 2
 # it proposes an immediate prompt update. Best for fast, granular adaptation.
 # - If set > 1 (Mini-Batch Mode): The Teacher aggregates feedback from N samples 
 # and proposes one holistic update. Best for stability, but requires a larger context window.
-TRAIN_BATCH_SIZE = 1
+TRAIN_BATCH_SIZE = 4
 
 # Validation Batch Size (Hardware Execution):
 # Strictly controls inference throughput and VRAM usage during the evaluation phase.
 # - Unlike Train Batch Size, this does NOT affect the optimization logic or results.
 # - It simply defines how many validation queries are processed in parallel on the GPU.
 # Keep it low for T4 GPUs to prevent Out-Of-Memory (OOM) errors.
-VAL_BATCH_SIZE = 1
+VAL_BATCH_SIZE = 2
