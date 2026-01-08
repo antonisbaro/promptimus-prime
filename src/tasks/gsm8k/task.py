@@ -1,10 +1,15 @@
 """
-GSM8K Task Definition.
+GSM8K Task Definition with Peer Nodes Architecture.
 
-This module defines:
-1. The output parser (`parse_gsm8k_answer`) which extracts numbers from text.
-2. The Student Component (`GSM8KStudent`) which holds the trainable system prompt
-   and the generator logic.
+This module implements the full LLM-AutoDiff architecture by decomposing the 
+system prompt into three distinct, optimizable peer nodes:
+1.  **Instruction:** The core task definition.
+2.  **Demos:** Few-shot demonstrations (in-context learning).
+3.  **Output Format:** Specific formatting constraints.
+
+This modular approach allows the optimizer to target specific aspects of the 
+prompt generation independently. The module also defines the output parser 
+and the Student Component that orchestrates these parameters.
 """
 
 import re
@@ -62,66 +67,114 @@ def parse_gsm8k_answer(output: Any) -> str:
 # -----------------------------------------------------------------------------
 class GSM8KStudent(adal.Component):
     """
-    The Student Component responsible for solving math problems.
+    The Student Component implementing the Peer Nodes architecture for GSM8K.
+
+    This component wraps the LLM generator and manages three distinct, 
+    trainable parameters (Instruction, Demos, Output Format). 
     
-    This component wraps the LLM generator and holds the 'system_prompt' 
-    as a trainable Parameter. This allows the AdalFlow optimizer to update 
-    the instructions based on feedback.
+    It handles:
+    1.  **Initialization:** Loading initial prompt states from external text files 
+        located in the `src/tasks/gsm8k/prompts/` directory.
+    2.  **Optimization:** Exposing these parameters to the AdalFlow optimizer via `requires_opt=True`.
+    3.  **Generation:** Assembling the peer nodes and user input into a structured 
+        XML-like template for the forward pass.
     """
     def __init__(self, student_client: adal.ModelClient, model_kwargs: Dict):
         """
-        Initialize the Student.
+        Initialize the Student with Peer Nodes.
+
+        Sets up the three optimizable parameters (`instruction`, `demos`, `output_format`)
+        by reading their initial content from the file system. If files are missing,
+        safe defaults are provided.
 
         Args:
             student_client (ModelClient): The backend client (e.g., LocalLLMClient).
-            model_kwargs (Dict): Generation parameters (temp, max_tokens, etc.).
+            model_kwargs (Dict): Generation parameters (temperature, max_tokens, etc.).
         """
         super().__init__()
 
-        # Load Initial Prompt from File
-        # We use logic relative to this file's location to ensure it works 
-        # regardless of the execution directory.
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        prompt_path = os.path.join(current_dir, "initial_prompt.txt")
+        # Helper to load text files safely
+        def load_prompt_file(filename: str, default: str) -> str:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            file_path = os.path.join(current_dir, "prompts", filename)
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    return f.read().strip()
+            except FileNotFoundError:
+                print(f"⚠️ Warning: {filename} not found. Using default.")
+                return default
 
-        try:
-            with open(prompt_path, "r", encoding="utf-8") as f:
-                initial_data = f.read().strip()
-        except FileNotFoundError:
-            # Fallback if file is missing (though it shouldn't be)
-            initial_data = "You are a helpful math assistant. Solve the problem step by step. Finish your answer with exactly: 'Answer: X' where X is the number."
-            print(f"⚠️ Warning: {prompt_path} not found. Using fallback prompt.")
-
-        # The System Prompt is the trainable parameter.
-        # We set requires_opt=True to tell AdalFlow this text should be optimized.
-        self.system_prompt = adal.Parameter(
-            data=initial_data,
-            role_desc="Math Instructions",
+        # Define Peer Parameters
+        # Peer 1: Core Instruction
+        self.instruction = adal.Parameter(
+            data=load_prompt_file("instruction.txt", "You are a helpful math assistant. Solve the problem step by step."),
+            role_desc="Task Instruction",
             requires_opt=True,
             param_type=adal.ParameterType.PROMPT,
-            name="system_prompt"
+            name="instruction"
         )
 
-        # Initialize Generator
-        # We pass the wrapped 'parse_gsm8k_answer' component here.
-        # The template explicitly combines the system prompt and the user input
-        # into a single string for the client.
+        # Peer 2: Few-Shot Demonstrations (The most important for bigger gains)
+        self.demos = adal.Parameter(
+            data=load_prompt_file("demos.txt", ""),
+            role_desc="Few-shot Examples",
+            requires_opt=True,
+            param_type=adal.ParameterType.DEMOS,
+            name="demos"
+        )
+
+        # Peer 3: Output Formatting
+        self.output_format = adal.Parameter(
+            data=load_prompt_file("output_format.txt", "Finish your answer with exactly: 'Answer: X' where X is the number."),
+            role_desc="Output Format formatting requirements",
+            requires_opt=True,
+            param_type=adal.ParameterType.PROMPT,
+            name="output_format"
+        )
+
+        # Initialize Generator with Compound Template
+        # We explicitly structure the prompt using the three peers.
         self.generator = adal.Generator(
             model_client=student_client,
             model_kwargs=model_kwargs,
-            template="{{system_prompt}}\n\n{{input_str}}",
+            template="""<INSTRUCTION>
+{{instruction}}
+</INSTRUCTION>
+
+<EXAMPLES>
+{{demos}}
+</EXAMPLES>
+
+<FORMAT>
+{{output_format}}
+</FORMAT>
+
+<USER_INPUT>
+{{input_str}}
+</USER_INPUT>""",
             output_processors=parse_gsm8k_answer,
             use_cache=False
         )
 
     def call(self, question: str, id: str = None) -> GeneratorOutput:
         """
-        Forward pass: Generates an answer for a given math question.
+        Executes the Forward Pass.
+
+        Injects the current state of all three peer parameters (Instruction, Demos, Format)
+        along with the user question into the generator template.
+
+        Args:
+            question (str): The math problem to solve.
+            id (str, optional): The unique sample ID.
+
+        Returns:
+            GeneratorOutput: The model's raw response and parsed data.
         """
         return self.generator(
             prompt_kwargs={
-                # Pass the current data of the trainable parameter
-                "system_prompt": self.system_prompt.data, 
+                "instruction": self.instruction.data,
+                "demos": self.demos.data,
+                "output_format": self.output_format.data,
                 "input_str": question
             },
             id=id

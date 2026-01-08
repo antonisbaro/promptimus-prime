@@ -1,16 +1,21 @@
 """
-GSM8K Training Script.
+GSM8K Training Execution Script.
 
-This script executes the Text-Grad optimization loop. It:
-1. Initializes the Student and Teacher models using the custom LocalLLMClient.
-2. Loads the GSM8K dataset and performs a deterministic split (Train/Val).
-3. Configures the AdalFlow Trainer with the TGD Optimizer.
-4. Runs the training process.
-5. Saves the optimized system prompt to a file for later evaluation.
+This module implements the end-to-end Textual Gradient Descent (TGD) optimization loop 
+for the GSM8K reasoning task. It utilizes the LLM-AutoDiff architecture with **Peer Nodes**, 
+optimizing three distinct components simultaneously:
+1. Task Instruction
+2. Few-Shot Demonstrations
+3. Output Format
+
+Key Features:
+- **Resumable Training:** Automatically detects and loads the latest checkpoint from `outputs/gsm8k/ckpt`.
+- **Deterministic Splits:** Enforces strict Train/Validation separation based on configuration.
+- **Artifact Persistence:** Saves the final optimized state of all peer nodes to individual text files.
 
 Usage:
-    Run this script from the project root:
-    python -m src.tasks.gsm8k.train
+    Run as a module from the project root:
+    $ python -m src.tasks.gsm8k.train
 """
 
 import logging
@@ -40,7 +45,14 @@ logging.getLogger("transformers").setLevel(logging.ERROR)
 
 def get_latest_checkpoint():
     """
-    Checks the CUSTOM checkpoint directory defined in config.
+    Retrieves the most recent checkpoint file to enable auto-resumption of training.
+
+    It recursively searches the configured `CKPT_DIR` for JSON files and selects 
+    the one with the latest creation timestamp. This allows the process to recover 
+    gracefully from interruptions (e.g., Colab timeouts).
+
+    Returns:
+        str or None: The absolute path to the latest checkpoint file, or None if no checkpoints exist.
     """
     # Look in our project folder: outputs/gsm8k/ckpt/  
     if not os.path.exists(CKPT_DIR):
@@ -59,7 +71,17 @@ def get_latest_checkpoint():
 
 def run_training():
     """
-    Main function to setup and run the optimization experiment.
+    Orchestrates the complete optimization experiment.
+
+    Workflow:
+    1. **Initialization:** Sets up 4-bit Quantized Student and Teacher models.
+    2. **Component Assembly:** Initializes the `GSM8KStudent` with Peer Nodes and connects it 
+       to the `GSM8KTrainingPipeline` and `TGDOptimizer`.
+    3. **Data Preparation:** Loads and splits the dataset into strict Train and Validation sets.
+    4. **Execution:** Instantiates the `adal.Trainer` with custom checkpoint paths and executes 
+       the training loop (with resume capability).
+    5. **Serialization:** Exports the final optimized prompts (Instruction, Demos, Format) 
+       to the `outputs/gsm8k` directory for evaluation.
     """
     # -------------------------------------------------------------------------
     # 1. INITIALIZE MODELS
@@ -80,7 +102,9 @@ def run_training():
     )
     
     # Capture initial state for comparison
-    initial_prompt = student_task.system_prompt.data
+    initial_instruction = student_task.instruction.data
+    initial_demos = student_task.demos.data
+    initial_format = student_task.output_format.data
 
     print(f"🛠️  Building Training Pipeline...")
     pipeline = GSM8KTrainingPipeline(
@@ -91,7 +115,7 @@ def run_training():
 
     print(f"🧠 Setting up Optimizer...")
     optimizer = TGDOptimizer(
-        params=student_task.parameters(), # Target the 'system_prompt'
+        params=student_task.parameters(), 
         model_client=teacher_client,      # The Teacher generates the updates
         model_kwargs=TEACHER_MODEL_KWARGS
     )
@@ -137,7 +161,9 @@ def run_training():
     if resume_ckpt:
         print(f"⏩ Resuming from checkpoint...")
     else:
-        print(f"📜 INITIAL PROMPT:\n{initial_prompt}\n")
+        print(f"📜 INITIAL INSTRUCTION:\n{initial_instruction}\n")
+        print(f"🔢 INITIAL DEMOS:\n{initial_demos}\n")
+        print(f"✍️ INITIAL FORMAT:\n{initial_format}\n")
     
     # Start the optimization loop.
     # This modifies student_task.system_prompt in-place.
@@ -150,16 +176,23 @@ def run_training():
     # -------------------------------------------------------------------------
     # 5. SAVE ARTIFACTS
     # -------------------------------------------------------------------------
-    final_prompt = student_task.system_prompt.data
     print("\n✅ TRAINING COMPLETE!")
-    print(f"📜 FINAL OPTIMIZED PROMPT:\n{final_prompt}")
+    print(f"📜 FINAL OPTIMIZED INSTRUCTION:\n{student_task.instruction.data}\n")
+    print(f"🔢 FINAL OPTIMIZED DEMOS:\n{student_task.demos.data}\n")
+    print(f"✍️ FINAL OPTIMIZED FORMAT:\n{student_task.output_format.data}\n")
+
+    # Dictionary mapping filenames to parameter data
+    artifacts = {
+        "optimized_instruction.txt": student_task.instruction.data,
+        "optimized_demos.txt": student_task.demos.data,
+        "optimized_format.txt": student_task.output_format.data
+    }
     
-    output_file = os.path.join(OUTPUT_DIR, "optimized_prompt.txt")
-    
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write(final_prompt)
-    
-    print(f"\n💾 Saved optimized prompt to: {output_file}")
+    for filename, content in artifacts.items():
+        file_path = os.path.join(OUTPUT_DIR, filename)
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        print(f"\n💾 Saved: {file_path}")
 
 if __name__ == "__main__":
     run_training()

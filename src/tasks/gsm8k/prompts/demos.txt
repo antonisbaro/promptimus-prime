@@ -1,0 +1,4 @@
+--- Example 1 ---
+Question: There are 5 apples. I eat 2. How many are left?
+Reasoning: I start with 5 apples. I subtract the 2 I ate. 5 - 2 = 3.
+Answer: 3

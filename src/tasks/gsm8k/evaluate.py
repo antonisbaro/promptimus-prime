@@ -1,18 +1,20 @@
 """
-GSM8K Evaluation Script.
+GSM8K Comparative Evaluation Script.
 
-This module performs a comparative evaluation between the Baseline (Zero-Shot) 
-system prompt and the Optimized (Text-Grad) system prompt.
+This module executes a rigorous A/B test between the Baseline (Zero-Shot) configuration 
+and the Optimized (Text-Grad) configuration on the held-out Test Set.
 
-Key Features:
-1. deterministic execution on the held-out TEST set.
-2. Calculation of exact-match accuracy.
-3. Export of a detailed CSV report ('comparison_results.csv') containing 
-   reasoning traces, predictions, and ground truth for side-by-side analysis.
+It evaluates the performance of the full Peer Node system (Instruction + Demos + Format)
+and generates a detailed CSV report for qualitative analysis of the improvements.
+
+Usage:
+    Run as a module from the project root:
+    $ python -m src.tasks.gsm8k.evaluate
 """
 
 import logging
 import os
+from typing import Dict
 import pandas as pd
 from typing import Tuple
 from tqdm import tqdm
@@ -25,7 +27,7 @@ from src.core.client import LocalLLMClient
 from src.tasks.gsm8k.config import (
     STUDENT_MODEL_NAME, 
     STUDENT_MODEL_KWARGS, 
-    TEST_SIZE
+    TEST_SIZE, OUTPUT_DIR
 )
 from src.tasks.gsm8k.task import GSM8KStudent
 
@@ -35,28 +37,39 @@ logging.getLogger("transformers").setLevel(logging.ERROR)
 
 def evaluate_prompt(client: LocalLLMClient, 
                     dataset: GSM8K, 
-                    prompt_text: str, 
+                    prompt_state: Dict[str, str], 
                     run_name: str = "Run") -> Tuple[float, pd.DataFrame]:
     """
-    Runs inference on the dataset using a specific system prompt and collects detailed results.
+    Executes inference on the dataset using a specific configuration of Peer Nodes.
+
+    It injects the provided state (instructions, demos, format) into the Student task, 
+    runs the forward pass, computes accuracy, and logs detailed execution traces.
 
     Args:
-        client (LocalLLMClient): The LLM client wrapper.
-        dataset (GSM8K): The dataset split to evaluate on.
-        prompt_text (str): The system prompt to test.
-        run_name (str): Label for this evaluation run (e.g., 'Baseline').
+        client (LocalLLMClient): The initialized LLM client wrapper.
+        dataset (GSM8K): The dataset split (Test Set) to evaluate on.
+        prompt_state (Dict[str, str]): A dictionary mapping parameter names ('instruction', 
+                                       'demos', 'output_format') to their text values.
+        run_name (str): Label for this evaluation run (e.g., 'Baseline', 'Optimized').
 
     Returns:
         Tuple[float, pd.DataFrame]: 
             - The accuracy score (0.0 to 1.0).
-            - A DataFrame containing detailed logs for every sample.
+            - A Pandas DataFrame containing detailed I/O logs (Question, Prediction, GT) for every sample.
     """
     print(f"\n📊 EVALUATING: {run_name}")
     print(f"ℹ️  Set Size: {len(dataset)}")
     
     # Initialize the Task Component with the specific prompt parameters
     task = GSM8KStudent(student_client=client, model_kwargs=STUDENT_MODEL_KWARGS)
-    task.system_prompt.data = prompt_text
+
+    # Inject State (Injecting the specific prompts we want to test)
+    if 'instruction' in prompt_state:
+        task.instruction.data = prompt_state['instruction']
+    if 'demos' in prompt_state:
+        task.demos.data = prompt_state['demos']
+    if 'output_format' in prompt_state:
+        task.output_format.data = prompt_state['output_format']
     
     # Initialize Metric
     eval_fn = AnswerMatchAcc(type="exact_match").compute_single_item
@@ -111,11 +124,16 @@ def evaluate_prompt(client: LocalLLMClient,
 
 def run_evaluation():
     """
-    Main execution routine.
-    1. Loads the Test Set.
-    2. Evaluates the Baseline Prompt.
-    3. Evaluates the Optimized Prompt (if available).
-    4. Saves a combined CSV report for analysis.
+    Orchestrates the comparative evaluation workflow.
+
+    Workflow:
+    1. **Initialization:** Sets up the Student model client.
+    2. **Data Loading:** Loads the strict Test split (unseen during training).
+    3. **Baseline Eval:** Loads the initial prompts from `src/tasks/gsm8k/prompts/` and evaluates performance.
+    4. **Optimized Eval:** Loads the trained prompts from `outputs/gsm8k/` and evaluates performance.
+    5. **Reporting:** 
+       - Calculates and prints the accuracy delta (Improvement).
+       - Merges detailed logs into `comparison_results.csv` for side-by-side analysis.
     """
     print(f"🚀 Initializing Evaluation Client...")
     client = LocalLLMClient(model_name=STUDENT_MODEL_NAME)
@@ -128,27 +146,40 @@ def run_evaluation():
     test_data = GSM8K(split="test", size=TEST_SIZE)
 
     # -------------------------------------------------------------------------
-    # 1. BASELINE EVALUATION (Default Prompt)
+    # 1. BASELINE EVALUATION (Default State)
     # -------------------------------------------------------------------------
-    # Retrieve the default prompt from the Task definition
-    temp_task = GSM8KStudent(client, STUDENT_MODEL_KWARGS)
-    baseline_prompt = temp_task.system_prompt.data
+    # Helper to load source
+    def load_src(name):
+        with open(f"src/tasks/gsm8k/prompts/{name}", "r") as f: return f.read().strip()
+
+    baseline_state = {
+        "instruction": load_src("instruction.txt"),
+        "demos": load_src("demos.txt"),
+        "output_format": load_src("output_format.txt")
+    }
     
     acc_baseline, df_baseline = evaluate_prompt(
-        client, test_data, baseline_prompt, run_name="Baseline"
+        client, test_data, baseline_state, run_name="Baseline"
     )
 
     # -------------------------------------------------------------------------
-    # 2. OPTIMIZED EVALUATION (Trained Prompt)
+    # 2. OPTIMIZED EVALUATION (Optimized State)
     # -------------------------------------------------------------------------
-    optimized_prompt_file = "outputs/gsm8k/optimized_prompt.txt"
     
-    if os.path.exists(optimized_prompt_file):
-        with open(optimized_prompt_file, "r", encoding="utf-8") as f:
-            optimized_prompt = f.read()
+    # Check if files exist
+    if os.path.exists(os.path.join(OUTPUT_DIR, "optimized_instruction.txt")):
+        
+        def load_opt(name):
+            with open(os.path.join(OUTPUT_DIR, name), "r") as f: return f.read().strip()
+
+        optimized_state = {
+            "instruction": load_opt("optimized_instruction.txt"),
+            "demos": load_opt("optimized_demos.txt"),
+            "output_format": load_opt("optimized_format.txt")
+        }
         
         acc_optimized, df_optimized = evaluate_prompt(
-            client, test_data, optimized_prompt, run_name="Optimized"
+            client, test_data, optimized_state, run_name="Optimized"
         )
         
         # ---------------------------------------------------------------------
@@ -178,8 +209,8 @@ def run_evaluation():
         print(f"Improvement:        {'+' if diff >= 0 else ''}{diff:.2%}")
         print("█"*50)
     else:
-        print(f"\n⚠️ Optimized prompt not found at '{optimized_prompt_file}'.")
-        print("   Please run 'train.py' first to generate the optimized artifact.")
+        print(f"\n⚠️ Optimized artifacts not found.")
+        print("   Please run 'train.py' first to generate the optimized artifacts.")
 
 if __name__ == "__main__":
     run_evaluation()
