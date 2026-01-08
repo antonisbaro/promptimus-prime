@@ -134,11 +134,11 @@ class GSM8KStudent(adal.Component):
         self.output_format = adal.Parameter(
             data=load_prompt_file("output_format.txt", "Finish your answer with exactly: 'Answer: X' where X is the number."),
             role_desc=(
-                "This parameter's SOLE PURPOSE is to enforce the final output syntax. "
-                "It should contain only strict rules about how the final line of the answer must be formatted, "
-                "for example, requiring the answer to be in the format 'Answer: X'."
+                "A non-trainable, fixed constraint that enforces the final output syntax. "
+                "This parameter contains the strict, mandatory rule for how the final line must be formatted "
+                "to be compatible with the answer parser. This rule CANNOT be changed."
             ),
-            requires_opt=True,
+            requires_opt=False,
             param_type=adal.ParameterType.PROMPT,
             name="output_format"
         )

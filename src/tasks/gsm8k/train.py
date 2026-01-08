@@ -21,9 +21,18 @@ Usage:
 import logging
 import os
 import glob
+
+import adalflow.optim.text_grad.tgd_optimizer as tgd_optimizer_module
+from src.core.custom_components import RobustXMLParser
+
+# We replace the original, brittle parser class in the library's
+# module with our new, robust class.
+tgd_optimizer_module.CustomizedXMLParser = RobustXMLParser
+
 import adalflow as adal
 from adalflow.datasets.gsm8k import GSM8K
-from src.core.custom_components import CustomTGDOptimizer
+from adalflow.optim.text_grad.tgd_optimizer import TGDOptimizer
+
 
 # Import Core Infrastructure
 from src.core.client import LocalLLMClient
@@ -114,7 +123,7 @@ def run_training():
     )
 
     print(f"🧠 Setting up Optimizer...")
-    optimizer = CustomTGDOptimizer(
+    optimizer = TGDOptimizer(
         params=student_task.parameters(), 
         model_client=teacher_client,      # The Teacher generates the updates
         model_kwargs=TEACHER_MODEL_KWARGS
