@@ -15,6 +15,7 @@ Usage:
 
 import logging
 import os
+import glob
 import adalflow as adal
 from adalflow.datasets.gsm8k import GSM8K
 from adalflow.optim.text_grad.tgd_optimizer import TGDOptimizer
@@ -27,7 +28,8 @@ from src.tasks.gsm8k.config import (
     STUDENT_MODEL_NAME, TEACHER_MODEL_NAME, 
     STUDENT_MODEL_KWARGS, TEACHER_MODEL_KWARGS,
     TRAIN_BATCH_SIZE, VAL_BATCH_SIZE, MAX_STEPS, 
-    TRAIN_SIZE, VAL_SIZE
+    TRAIN_SIZE, VAL_SIZE,
+    CKPT_DIR, OUTPUT_DIR
 )
 from src.tasks.gsm8k.task import GSM8KStudent
 from src.tasks.gsm8k.pipeline import GSM8KTrainingPipeline
@@ -35,6 +37,25 @@ from src.tasks.gsm8k.pipeline import GSM8KTrainingPipeline
 # Configure Logging
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("transformers").setLevel(logging.ERROR)
+
+def get_latest_checkpoint():
+    """
+    Checks the CUSTOM checkpoint directory defined in config.
+    """
+    # Look in our project folder: outputs/gsm8k/ckpt/  
+    if not os.path.exists(CKPT_DIR):
+        return None
+        
+    # Search for all json files in the checkpoint tree
+    files = glob.glob(os.path.join(CKPT_DIR, "**", "*.json"), recursive=True)
+    
+    if not files:
+        return None
+        
+    # Get the most recent file
+    latest_file = max(files, key=os.path.getctime)
+    print(f"🔄 Found checkpoint to resume: {latest_file}")
+    return latest_file
 
 def run_training():
     """
@@ -93,17 +114,30 @@ def run_training():
     # -------------------------------------------------------------------------
     # 4. TRAINER SETUP & EXECUTION
     # -------------------------------------------------------------------------
+    # Ensure directory exists
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    os.makedirs(CKPT_DIR, exist_ok=True)
+
     trainer = adal.Trainer(
         adaltask=pipeline,
         optimizer=optimizer,
         strategy="random", 
         max_steps=MAX_STEPS,       
         batch_size=VAL_BATCH_SIZE,
-        train_batch_size=TRAIN_BATCH_SIZE
+        train_batch_size=TRAIN_BATCH_SIZE,
+        ckpt_path=CKPT_DIR
     )
 
-    print("\n🏁 STARTING TRAINING...")
-    print(f"📜 INITIAL PROMPT:\n{initial_prompt}\n")
+    # Resume Logic
+    resume_ckpt = get_latest_checkpoint()
+
+    print("\n🏁 STARTING TRAINING (Steps: {MAX_STEPS})...")
+    print(f"📂 Checkpoints will be saved to: {CKPT_DIR}")
+
+    if resume_ckpt:
+        print(f"⏩ Resuming from checkpoint...")
+    else:
+        print(f"📜 INITIAL PROMPT:\n{initial_prompt}\n")
     
     # Start the optimization loop.
     # This modifies student_task.system_prompt in-place.
@@ -119,12 +153,8 @@ def run_training():
     final_prompt = student_task.system_prompt.data
     print("\n✅ TRAINING COMPLETE!")
     print(f"📜 FINAL OPTIMIZED PROMPT:\n{final_prompt}")
-
-    # Ensure output directory exists
-    output_dir = "outputs/gsm8k"
-    os.makedirs(output_dir, exist_ok=True)
     
-    output_file = os.path.join(output_dir, "optimized_prompt.txt")
+    output_file = os.path.join(OUTPUT_DIR, "optimized_prompt.txt")
     
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(final_prompt)

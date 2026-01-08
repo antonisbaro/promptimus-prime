@@ -12,6 +12,18 @@ Usage:
 """
 
 # -----------------------------------------------------------------------------
+# OUTPUT PATHS
+# -----------------------------------------------------------------------------
+import os
+
+# Base directory for all GSM8K artifacts
+OUTPUT_DIR = "outputs/gsm8k"
+
+# Directory specifically for AdalFlow checkpoints
+# This makes them visible in the project folder instead of hidden in /root/.adalflow
+CKPT_DIR = os.path.join(OUTPUT_DIR, "ckpt")
+
+# -----------------------------------------------------------------------------
 # GLOBAL SETTINGS
 # -----------------------------------------------------------------------------
 # Setting a seed ensures reproducibility for dataset shuffling and splitting.
