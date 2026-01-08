@@ -119,7 +119,7 @@ class GSM8KStudent(adal.Component):
             data=load_prompt_file("demos.txt", ""),
             role_desc="Few-shot Examples",
             requires_opt=True,
-            param_type=adal.ParameterType.DEMOS,
+            param_type=adal.ParameterType.PROMPT,
             name="demos"
         )
 
