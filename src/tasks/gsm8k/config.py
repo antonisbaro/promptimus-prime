@@ -67,10 +67,10 @@ STUDENT_MODEL_KWARGS = {
 
 # Teacher Parameters:
 # - Temperature 0.4: Slightly lower to reduce hallucinations/leakage.
-# - max_new_tokens 4096: Needs space to explain the error (gradient) and rewrite the prompts.
+# - max_new_tokens 8192: Needs space to explain the error (gradient) and rewrite the prompts.
 TEACHER_MODEL_KWARGS = {
     "temperature": 0.4,
-    "max_new_tokens": 4096,
+    "max_new_tokens": 8192,
 }
 
 # -----------------------------------------------------------------------------
@@ -85,7 +85,7 @@ MAX_STEPS = 10
 # it proposes an immediate prompt update. Best for fast, granular adaptation.
 # - If set > 1 (Mini-Batch Mode): The Teacher aggregates feedback from N samples 
 # and proposes one holistic update. Best for stability, but requires a larger context window.
-TRAIN_BATCH_SIZE = 4
+TRAIN_BATCH_SIZE = 2
 
 # Validation Batch Size (Hardware Execution):
 # Strictly controls inference throughput and VRAM usage during the evaluation phase.
