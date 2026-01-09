@@ -17,9 +17,9 @@ cache_datasets/
 .env
 
 # Outputs & Checkpoints
-outputs/*
+outputs/**/*
 !outputs/**/
-!**/.gitkeep
+!outputs/**/.gitkeep
 
 # IDE specific files
 .idea/
