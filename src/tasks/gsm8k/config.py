@@ -59,18 +59,18 @@ TEACHER_MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
 # -----------------------------------------------------------------------------
 # Student Parameters:
 # - Temperature 0.5: Allows for some creativity in Chain-of-Thought reasoning.
-# - max_new_tokens 512: Enough space for step-by-step logic.
+# - max_new_tokens 1024: Enough space for step-by-step logic.
 STUDENT_MODEL_KWARGS = {
     "temperature": 0.5,
-    "max_new_tokens": 512,
+    "max_new_tokens": 1024,
 }
 
 # Teacher Parameters:
 # - Temperature 0.4: Slightly lower to reduce hallucinations/leakage.
-# - max_new_tokens 2048: Needs space to explain the error (gradient) and rewrite the prompts.
+# - max_new_tokens 4096: Needs space to explain the error (gradient) and rewrite the prompts.
 TEACHER_MODEL_KWARGS = {
     "temperature": 0.4,
-    "max_new_tokens": 2048,
+    "max_new_tokens": 4096,
 }
 
 # -----------------------------------------------------------------------------

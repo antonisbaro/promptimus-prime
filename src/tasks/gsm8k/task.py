@@ -122,8 +122,11 @@ class GSM8KStudent(adal.Component):
         self.demos = adal.Parameter(
             data=load_prompt_file("demos.txt", ""),
             role_desc=(
-                "This parameter's SOLE PURPOSE is to provide complete, high-quality examples of the task. "
-                "Each entry must be a full Question-Reasoning-Answer block. This is the primary place for in-context learning."
+                "This parameter's SOLE PURPOSE is to provide a list of high-quality, in-context learning examples. "
+                "Your primary goal is to improve this list not by simply adding many examples, but by strategically refining it. "
+                "Quality and precision is far more important than quantity. "
+                "To achieve this, analyze the reasoning errors from the feedback. Then, either REVISE an existing example "
+                "or ADD a single, new, well-crafted example specifically designed to teach the model how to overcome that exact type of failure."
             ),
             requires_opt=True,
             param_type=adal.ParameterType.PROMPT,

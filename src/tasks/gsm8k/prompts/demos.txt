@@ -1,4 +1,4 @@
 --- Example 1 ---
-Question: There are 5 apples. I eat 2. How many are left?
-Reasoning: I start with 5 apples. I subtract the 2 I ate. 5 - 2 = 3.
-Answer: 3
+Question: A library has three sections. The Fantasy section has 50 more books than the Sci-Fi section. The History section has 100 fewer books than the Fantasy section. If the Sci-Fi section has 200 books, how many books does the History section have?
+Reasoning: Let S be the number of books in the Sci-Fi section, so S = 200. The Fantasy section has 50 more books than Sci-Fi, so F = S + 50 = 200 + 50 = 250. The prompt states the History section has '100 fewer books than the Fantasy section'. This means we must subtract 100 from the Fantasy section's total. Therefore, the number of books in the History section is H = F - 100 = 250 - 100 = 150.
+Answer: 150
