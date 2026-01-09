@@ -85,7 +85,7 @@ MAX_STEPS = 10
 # it proposes an immediate prompt update. Best for fast, granular adaptation.
 # - If set > 1 (Mini-Batch Mode): The Teacher aggregates feedback from N samples 
 # and proposes one holistic update. Best for stability, but requires a larger context window.
-TRAIN_BATCH_SIZE = 2
+TRAIN_BATCH_SIZE = 4
 
 # Validation Batch Size (Hardware Execution):
 # Strictly controls inference throughput and VRAM usage during the evaluation phase.

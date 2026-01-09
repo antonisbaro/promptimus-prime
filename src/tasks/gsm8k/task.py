@@ -109,9 +109,9 @@ class GSM8KStudent(adal.Component):
         self.instruction = adal.Parameter(
             data=load_prompt_file("instruction.txt", "You are a helpful math assistant. Solve the problem step by step."),
             role_desc=(
-                "This parameter's SOLE PURPOSE is to define the agent's high-level identity and core mission. "
-                "Focus exclusively on persona (e.g., 'You are a math expert') and the primary strategy "
-                "(e.g., 'Solve problems step-by-step'). All concrete examples belong in the 'demos' parameter."
+                "This parameter defines the agent's high-level persona. Its content MUST be pure instruction. "
+                "It is strictly forbidden to include any Question/Answer examples within this parameter. "
+                "All examples belong in the 'demos' parameter."
             ),
             requires_opt=True,
             param_type=adal.ParameterType.PROMPT,
@@ -122,12 +122,11 @@ class GSM8KStudent(adal.Component):
         self.demos = adal.Parameter(
             data=load_prompt_file("demos.txt", ""),
             role_desc=(
-                "This parameter's SOLE PURPOSE is to provide a list of high-quality, in-context learning examples. "
-                "Your primary goal is to improve this list not by simply adding many examples, but by strategically refining it. "
-                "Quality and precision is far more important than quantity. "
-                "To achieve this, analyze the reasoning errors from the feedback. Then, either REVISE an existing example "
-                "or ADD a single, new, well-crafted example specifically designed to teach the model how to overcome that exact type of failure."
-            ),
+                "This parameter's SOLE PURPOSE is to provide a list of Question-Reasoning-Answer examples. "
+                "Its content MUST be only examples. It is strictly forbidden to include any high-level "
+                "instructions or persona definitions here. Quality and precision are far more important than quantity. "
+                "The best improvement is to add or revise a single example that targets a specific reasoning failure from the feedback."
+            ),  
             requires_opt=True,
             param_type=adal.ParameterType.PROMPT,
             name="demos"

@@ -102,9 +102,10 @@ class LocalLLMClient(ModelClient):
         Returns:
             Dict: A dictionary ready to be unpacked into `call()`.
         """
-        final_args = model_kwargs.copy()
-        # Map the generic 'input' to 'input_str' for clarity in the call method
-        final_args["input_str"] = input
+        final_args = {
+            "input_str": input,
+            "model_kwargs": model_kwargs.copy()
+        }
         return final_args
 
     def parse_chat_completion(self, completion: Any) -> GeneratorOutput:
