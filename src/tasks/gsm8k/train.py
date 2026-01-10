@@ -164,7 +164,7 @@ def run_training():
     # Resume Logic
     resume_ckpt = get_latest_checkpoint()
 
-    print("\n🏁 STARTING TRAINING (Steps: {MAX_STEPS})...")
+    print(f"\n🏁 STARTING TRAINING (Steps: {MAX_STEPS})...")
     print(f"📂 Checkpoints will be saved to: {CKPT_DIR}")
 
     if resume_ckpt:
