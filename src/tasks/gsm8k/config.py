@@ -51,25 +51,25 @@ TEST_SIZE = 100    # Number of samples for the final 'evaluate.py' report
 STUDENT_MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
 
 # Teacher: The "Backward Engine" and "Optimizer".
-# We use a stronger 8B model to provide high-quality feedback and prompt edits.
-TEACHER_MODEL_NAME = "meta-llama/Meta-Llama-3-8B-Instruct"
+# We use a stronger 7B model to provide high-quality feedback and prompt edits.
+TEACHER_MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
 
 # -----------------------------------------------------------------------------
 # GENERATION PARAMETERS
 # -----------------------------------------------------------------------------
 # Student Parameters:
-# - Temperature 0.5: Allows for some creativity in Chain-of-Thought reasoning.
+# - Temperature 0.0: "Deterministic" output
 # - max_new_tokens 1024: Enough space for step-by-step logic.
 STUDENT_MODEL_KWARGS = {
-    "temperature": 0.5,
+    "temperature": 0.0,
     "max_new_tokens": 1024,
 }
 
 # Teacher Parameters:
-# - Temperature 0.4: Slightly lower to reduce hallucinations/leakage.
+# - Temperature 0.8: Allows for some creativity
 # - max_new_tokens 8192: Needs space to explain the error (gradient) and rewrite the prompts.
 TEACHER_MODEL_KWARGS = {
-    "temperature": 0.4,
+    "temperature": 0.8,
     "max_new_tokens": 8192,
 }
 

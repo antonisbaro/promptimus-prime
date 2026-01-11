@@ -131,8 +131,8 @@ class GSM8KStudent(adal.Component):
             instruction_to_optimizer=(
                 "Your goal is to enrich and expand the existing list of few-shot examples. "
                 "You MUST preserve the existing examples that are working well. "
-                "Your primary task is to ADD completely NEW, well-crafted examples to this list. "
-                "These new examples should introduce novel reasoning patterns or problem categories, "
+                "Your primary task is to ADD completely NEW, well-crafted, Chain-of-Thought style examples to this list. "
+                "These new examples should demonstrate novel reasoning patterns or problem categories, "
                 "especially targeting the specific failures identified in the feedback. "
                 "Focus on broadening the diversity of the examples. "
                 "The content MUST be only examples; it is STRICTLY FORBIDDEN to include general instructions here."
