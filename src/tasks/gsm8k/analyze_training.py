@@ -18,7 +18,7 @@ adapts the prompts throughout the training process.
 
 Usage:
     Run as a module from the project root after a training session is complete:
-    $ python -m src.tasks.gsm8k.analyze_run
+    $ python -m src.tasks.gsm8k.analyze_training
 """
 
 import os
