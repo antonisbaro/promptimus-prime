@@ -115,7 +115,7 @@ class GSM8KStudent(adal.Component):
                 "Your goal is to refine the core instruction for the agent. "
                 "Focus on defining a clear persona and a robust, high-level reasoning strategy (like 'think step-by-step'). "
                 "This parameter's content MUST be pure instruction. "
-                "It is strictly forbidden to include any specific Question/Answer examples, as those belong in the 'demos' parameter."
+                "It is STRICTLY FORBIDDEN to include ANY specific examples, as those belong in the 'demos' parameter."
             ),
             requires_opt=True,
             param_type=adal.ParameterType.PROMPT,
@@ -129,12 +129,13 @@ class GSM8KStudent(adal.Component):
             role_desc="Provides a list of Question-Reasoning-Answer examples for in-context learning.",
             # The actionable command for the optimizer.
             instruction_to_optimizer=(
-                "Your goal is to improve the list of few-shot examples. "
-                "The most valuable improvement is to ADD a completely NEW, well-crafted example to the existing list. "
-                "This new example should target a specific reasoning failure identified in the feedback. "
-                "Prioritizing the addition of novel scenarios that cover different types of reasoning is crucial for progress. "
-                "Quality and precision are far more important than quantity. "
-                "The content MUST be only examples; it is strictly forbidden to include general instructions here."
+                "Your goal is to enrich and expand the existing list of few-shot examples. "
+                "You MUST preserve the existing examples that are working well. "
+                "Your primary task is to ADD completely NEW, well-crafted examples to this list. "
+                "These new examples should introduce novel reasoning patterns or problem categories, "
+                "especially targeting the specific failures identified in the feedback. "
+                "Focus on broadening the diversity of the examples. "
+                "The content MUST be only examples; it is STRICTLY FORBIDDEN to include general instructions here."
             ),
             requires_opt=True,
             param_type=adal.ParameterType.PROMPT,
