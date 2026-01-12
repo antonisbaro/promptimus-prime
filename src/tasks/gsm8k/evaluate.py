@@ -185,12 +185,31 @@ def run_evaluation():
         # ---------------------------------------------------------------------
         # 3. SAVE COMPARISON REPORT
         # ---------------------------------------------------------------------
-        # Prefix columns to distinguish between runs in the merged file
-        df_baseline = df_baseline.add_prefix("base_")
-        df_optimized = df_optimized.add_prefix("opt_")
+        # The 'question' and 'ground_truth' columns are identical for both runs.
+        # We can take them from the baseline DataFrame and use them as our base.
+        # We select only the columns that are common to both evaluations.
+        base_info_df = df_baseline[['question', 'ground_truth']].copy()
+
+        # Rename the columns that are specific to each run BEFORE merging.
+        df_baseline_renamed = df_baseline.rename(columns={
+            'prediction': 'base_prediction',
+            'reasoning': 'base_reasoning',
+            'is_correct': 'base_is_correct'
+        })
         
-        # Combine side-by-side (index alignment is guaranteed by deterministic loading)
-        comparison_df = pd.concat([df_baseline, df_optimized], axis=1)
+        df_optimized_renamed = df_optimized.rename(columns={
+            'prediction': 'opt_prediction',
+            'reasoning': 'opt_reasoning',
+            'is_correct': 'opt_is_correct'
+        })
+        
+        # Now, merge everything into a single, clean DataFrame.
+        # We merge based on the index, as the order of samples is the same.
+        comparison_df = pd.concat([
+            base_info_df,
+            df_baseline_renamed[['base_prediction', 'base_reasoning', 'base_is_correct']],
+            df_optimized_renamed[['opt_prediction', 'opt_reasoning', 'opt_is_correct']]
+        ], axis=1)
         
         output_csv = "outputs/gsm8k/comparison_results.csv"
         comparison_df.to_csv(output_csv, index=False)

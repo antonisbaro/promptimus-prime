@@ -1,19 +1,31 @@
 """
 GSM8K Visualization Module.
 
-This module renders the analysis of the LLM-AutoDiff optimization results.
-Updated to support Peer Nodes architecture.
+This module renders a comprehensive analysis of the LLM-AutoDiff optimization
+results by comparing the performance of a baseline and an optimized prompt set.
+It is designed to work with the Peer Nodes architecture.
 
-It generates:
-1. Word-Level Diffs (HTML) for all three prompt components:
-   - Instruction
-   - Few-Shot Demonstrations
-   - Output Format
-2. A table of "Success Stories" (examples fixed by the optimization) based on the CSV report.
+The generated report includes:
+
+1.  **Prompt Component Diffs:**
+    - Renders a word level HTML diff for each prompt component (Instruction,
+      Demos, Output Format) to visualize the exact changes made by the
+      optimizer.
+
+2.  **Performance Impact Analysis:**
+    - **Success Stories:** Displays interactive cards for test cases that the
+      baseline model failed but the optimized model answered correctly.
+    - **Failure Stories (Regressions):** Displays interactive cards for test
+      cases that the baseline model answered correctly but the optimized
+      model failed, highlighting potential negative impacts of the new prompt.
+    - **Collapsible Reasoning:** Each card includes a collapsible section to
+      show and compare the step-by-step reasoning (`Chain-of-Thought`) of
+      both models, allowing for in-depth qualitative analysis.
 """
 
 import os
 import difflib
+import html
 import pandas as pd
 from IPython.display import display, HTML, Markdown
 from src.tasks.gsm8k.config import OUTPUT_DIR
@@ -122,45 +134,88 @@ def run_visualization():
             display_component_diff(title, base_file, opt_file)
 
         # ---------------------------------------------------------------------
-        # 2. DISPLAY SUCCESS STORIES (WINS)
+        # 2. ANALYZE CSV RESULTS
         # ---------------------------------------------------------------------
+        display(Markdown("---")) # Separator
+        display(Markdown("### Performance Impact on Test Set"))
+
         if os.path.exists(RESULTS_CSV_PATH):
             df = pd.read_csv(RESULTS_CSV_PATH)
             
-            # Filter for rows where Baseline failed but Optimized succeeded
+            # --- Success Stories (Wins) ---
             wins = df[(df['base_is_correct'] == False) & (df['opt_is_correct'] == True)]
-            
-            display(Markdown(f"### 🏆 Success Stories: {len(wins)} examples fixed"))
+            display(Markdown(f"#### 🏆 Success Stories: {len(wins)} examples fixed by optimization"))
             
             if len(wins) > 0:
-                # Iterate and display top 3 wins
-                for idx, row in wins.head(3).iterrows():
+                for idx, row in wins.head(5).iterrows():
+                    # Sanitize HTML content before displaying
+                    question = html.escape(str(row['question']))
+                    base_reasoning = html.escape(str(row['base_reasoning'])).replace('\n', '<br>')
+                    opt_reasoning = html.escape(str(row['opt_reasoning'])).replace('\n', '<br>')
+                    
+                    # Unique ID for the collapsible element
+                    details_id = f"win-{idx}"
+
                     html_card = f"""
-                    <div style="
-                        border-left: 5px solid #4CAF50; 
-                        background-color: #f1f8e9; 
-                        padding: 15px; 
-                        margin-bottom: 15px; 
-                        max-width: 850px;
-                        font-family: sans-serif;
-                    ">
+                    <div style="border-left: 5px solid #4CAF50; background-color: #f1f8e9; padding: 15px; margin-bottom: 15px; max-width: 850px; font-family: sans-serif;">
                         <div style="font-weight: bold; margin-bottom: 5px; color: #2e7d32;">📘 Question:</div>
-                        <div style="margin-bottom: 10px; font-style: italic;">{row['question']}</div>
-                        
+                        <div style="margin-bottom: 10px; font-style: italic;">{question}</div>
                         <div style="margin-bottom: 5px;">
                             <span style="color: #c62828;">❌ <strong>Baseline Answer:</strong></span> {row['base_prediction']}
                         </div>
                         <div>
                             <span style="color: #2e7d32;">✅ <strong>Optimized Answer:</strong></span> {row['opt_prediction']} 
-                            <span style="color: #555;">(GT: {row['ground_truth']})</span>
+                            <span style="color: #555;">(Correct: {row['ground_truth']})</span>
                         </div>
+                        <details style="margin-top: 10px;">
+                            <summary style="cursor: pointer; color: #555; font-size: 0.9em;">Show/Hide Reasoning</summary>
+                            <div style="background-color: #e8f5e9; padding: 10px; margin-top: 5px; border-radius: 4px; font-family: monospace; font-size: 0.9em;">
+                                <strong>Baseline Reasoning:</strong><br>{base_reasoning}<br><br>
+                                <strong>Optimized Reasoning:</strong><br>{opt_reasoning}
+                            </div>
+                        </details>
                     </div>
                     """
                     display(HTML(html_card))
             else:
-                print("No direct flips found in the test set comparison.")
+                print("No examples were fixed by the optimization.")
+
+            # --- Failure Stories (Regressions) ---
+            regressions = df[(df['base_is_correct'] == True) & (df['opt_is_correct'] == False)]
+            display(Markdown(f"#### 📉 Failure Stories (Regressions): {len(regressions)} examples broken by optimization"))
+            
+            if len(regressions) > 0:
+                for idx, row in regressions.head(5).iterrows():
+                    question = html.escape(str(row['question']))
+                    base_reasoning = html.escape(str(row['base_reasoning'])).replace('\n', '<br>')
+                    opt_reasoning = html.escape(str(row['opt_reasoning'])).replace('\n', '<br>')
+                    
+                    html_card = f"""
+                    <div style="border-left: 5px solid #f44336; background-color: #ffebee; padding: 15px; margin-bottom: 15px; max-width: 850px; font-family: sans-serif;">
+                        <div style="font-weight: bold; margin-bottom: 5px; color: #c62828;">📘 Question:</div>
+                        <div style="margin-bottom: 10px; font-style: italic;">{question}</div>
+                        <div style="margin-bottom: 5px;">
+                            <span style="color: #2e7d32;">✅ <strong>Baseline Answer:</strong></span> {row['base_prediction']}
+                        </div>
+                        <div>
+                            <span style="color: #c62828;">❌ <strong>Optimized Answer:</strong></span> {row['opt_prediction']} 
+                            <span style="color: #555;">(Correct: {row['ground_truth']})</span>
+                        </div>
+                         <details style="margin-top: 10px;">
+                            <summary style="cursor: pointer; color: #555; font-size: 0.9em;">Show/Hide Reasoning</summary>
+                            <div style="background-color: #ffcdd2; padding: 10px; margin-top: 5px; border-radius: 4px; font-family: monospace; font-size: 0.9em;">
+                                <strong>Baseline Reasoning:</strong><br>{base_reasoning}<br><br>
+                                <strong>Optimized Reasoning:</strong><br>{opt_reasoning}
+                            </div>
+                        </details>
+                    </div>
+                    """
+                    display(HTML(html_card))
+            else:
+                print("No correct examples were broken by the optimization. Great!")
+
         else:
-            print("⚠️ Results CSV not found. Please run evaluation first.")
+            print(f"⚠️ Results CSV not found at '{RESULTS_CSV_PATH}'. Please run the evaluation script first.")
 
     except Exception as e:
         print(f"Visualization Error: {e}")
