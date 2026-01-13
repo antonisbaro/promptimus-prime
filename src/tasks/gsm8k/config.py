@@ -39,9 +39,9 @@ SEED = 42
 
 # NOTE: Keep these numbers small for Google Colab Free Tier (T4 GPU).
 # Increase them if running on stronger hardware (e.g., A100).
-TRAIN_SIZE = 50   # Number of samples for the optimization loop
-VAL_SIZE = 50      # Number of samples for validating new prompts during training
-TEST_SIZE = 100    # Number of samples for the final 'evaluate.py' report
+TRAIN_SIZE = 100   # Number of samples for the optimization loop
+VAL_SIZE = 150      # Number of samples for validating new prompts during training
+TEST_SIZE = 200    # Number of samples for the final 'evaluate.py' report
 
 # -----------------------------------------------------------------------------
 # MODEL CONFIGURATION
@@ -77,7 +77,7 @@ TEACHER_MODEL_KWARGS = {
 # TRAINING / OPTIMIZATION HYPERPARAMETERS
 # -----------------------------------------------------------------------------
 # Max Steps: How many optimization iterations (generations) to run.
-MAX_STEPS = 12 
+MAX_STEPS = 5 
 
 # Train Batch Size (Optimization Logic):
 # Determines how many training samples are accumulated before the Optimizer performs an update.
@@ -92,4 +92,4 @@ TRAIN_BATCH_SIZE = 4
 # - Unlike Train Batch Size, this does NOT affect the optimization logic or results.
 # - It simply defines how many validation queries are processed in parallel on the GPU.
 # Keep it low for T4 GPUs to prevent Out-Of-Memory (OOM) errors.
-VAL_BATCH_SIZE = 4
+VAL_BATCH_SIZE = 16
