@@ -114,13 +114,11 @@ class GSM8KStudent(adal.Component):
             instruction_to_optimizer=(
                 "Your goal is to refine the core instruction for the agent. "
                 "Focus on defining a clear persona and a robust, high-level reasoning strategy (like 'think step-by-step'). "
-                "This parameter's content MUST be pure instruction. "
-                "It is STRICTLY FORBIDDEN to include ANY specific examples, as those belong in the 'demos' parameter."
+                "This parameter's content **MUST BE PURE INSTRUCTION AND REASONING STRATEGY**."
             ),
             # This helps the Critic to focus its feedback correctly.
             instruction_to_backward_engine=(
                 "When assessing this parameter's fault, focus ONLY on its clarity, persona, and strategic direction. "
-                "Do not blame this parameter for lacking specific examples."
             ),
             requires_opt=True,
             param_type=adal.ParameterType.PROMPT,
@@ -136,16 +134,16 @@ class GSM8KStudent(adal.Component):
             instruction_to_optimizer=(
                 "Your goal is to improve the list of few-shot examples. "
                 "Your response MUST be a complete, self-contained list of examples. "
-                "You must REPRODUCE any existing examples you wish to keep, and then ADD your completely NEW, "
+                "You must REPRODUCE any existing examples you wish to keep, and then ADD your completely NEW AND DIVERSE, "
                 "well-crafted, Chain-of-Thought style examples. "
-                "The new examples should target reasoning failures from the feedback and introduce novel scenarios. "
+                "The new examples should target reasoning failures from the feedback and introduce **DIVERSE AND NOVEL REASONING PATTERNS**. "
                 "Ensure the final list starts with '--- Example 1 ---', followed by '--- Example 2 ---', and so on. "
-                "The content MUST be only examples; it is STRICTLY FORBIDDEN to include general instructions here."
+                "This parameter's content MUST BE ONLY EXAMPLES."
             ),
             # This helps the Critic to focus its feedback correctly.
             instruction_to_backward_engine=(
                 "When assessing this parameter's fault, focus ONLY on the quality, relevance, and sufficiency of the provided examples. "
-                "Consider if a different or entirely new example was needed to prevent the error."
+                "Consider if a different or entirely new and diverse example was needed to prevent the error."
             ),
             requires_opt=True,
             param_type=adal.ParameterType.PROMPT,
@@ -166,7 +164,6 @@ class GSM8KStudent(adal.Component):
             # This helps the Critic to focus its feedback correctly.
             instruction_to_backward_engine=(
                 "When assessing this parameter's fault, check ONLY if the Student's final output failed to adhere to this strict formatting rule. "
-                "Do not blame this parameter for logical errors in the reasoning."
             ),
             requires_opt=False,
             param_type=adal.ParameterType.PROMPT,
