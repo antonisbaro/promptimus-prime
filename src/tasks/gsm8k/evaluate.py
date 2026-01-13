@@ -22,12 +22,14 @@ from tqdm import tqdm
 import adalflow as adal
 from adalflow.datasets.gsm8k import GSM8K
 from adalflow.eval.answer_match_acc import AnswerMatchAcc
+from sklearn.model_selection import train_test_split
 
 from src.core.client import LocalLLMClient
 from src.tasks.gsm8k.config import (
     STUDENT_MODEL_NAME, 
     STUDENT_MODEL_KWARGS, 
-    TEST_SIZE, OUTPUT_DIR
+    TEST_SIZE, VAL_SIZE,
+    OUTPUT_DIR, SEED
 )
 from src.tasks.gsm8k.task import GSM8KStudent
 
@@ -141,9 +143,23 @@ def run_evaluation():
     # -------------------------------------------------------------------------
     # DATA LOADING (TEST SPLIT)
     # -------------------------------------------------------------------------
+    # To ensure a fair and consistent evaluation, it is CRITICAL that we use the
+    # exact same data splits as the training script. Any discrepancy would
+    # invalidate the results.
+
+    # We replicate the splitting logic from `train.py` here to guarantee
+    # that `test_data` contains the exact same samples that were held out
+    # during the training/validation phase.
     print(f"📚 Loading TEST Dataset...")
-    # We use the strict 'test' split for final reporting to ensure no data leakage.
-    test_data = GSM8K(split="test", size=TEST_SIZE)
+    # Load the same initial pool of unseen data from the official 'test' split.
+    unseen_data = GSM8K(split="test", size=VAL_SIZE+TEST_SIZE)
+    
+    # Apply the same deterministic split using the same `test_size` and `random_state`.
+    val_data, test_data = train_test_split(
+        unseen_data,
+        test_size=TEST_SIZE,
+        random_state=SEED
+    )
 
     # -------------------------------------------------------------------------
     # 1. BASELINE EVALUATION (Default State)

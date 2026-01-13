@@ -32,6 +32,7 @@ tgd_optimizer_module.CustomizedXMLParser = RobustXMLParser
 import adalflow as adal
 from adalflow.datasets.gsm8k import GSM8K
 from adalflow.optim.text_grad.tgd_optimizer import TGDOptimizer
+from sklearn.model_selection import train_test_split
 
 
 # Import Core Infrastructure
@@ -42,8 +43,8 @@ from src.tasks.gsm8k.config import (
     STUDENT_MODEL_NAME, TEACHER_MODEL_NAME, 
     STUDENT_MODEL_KWARGS, TEACHER_MODEL_KWARGS,
     TRAIN_BATCH_SIZE, NUM_WORKERS, MAX_STEPS, 
-    TRAIN_SIZE, VAL_SIZE,
-    CKPT_DIR, OUTPUT_DIR
+    TRAIN_SIZE, VAL_SIZE, TEST_SIZE,
+    CKPT_DIR, OUTPUT_DIR, SEED
 )
 from src.tasks.gsm8k.task import GSM8KStudent
 from src.tasks.gsm8k.pipeline import GSM8KTrainingPipeline
@@ -132,13 +133,29 @@ def run_training():
     # -------------------------------------------------------------------------
     # 3. DATA LOADING 
     # -------------------------------------------------------------------------
+    # This section implements a robust data splitting strategy to prevent
+    # data leakage between the validation and test sets. Some models may have
+    # been trained on the official GSM8K training set, making the official
+    # validation split (derived from train) an unreliable measure of true
+    # performance.
+    
+    # To solve this, we create our own clean validation and test sets by
+    # splitting the official 'test' split, which models have not seen.
     print(f"📚 Loading Datasets...")
     
     # Load strict Train split
     train_data = GSM8K(split="train", size=TRAIN_SIZE)
     
-    # Load strict Val split
-    val_data = GSM8K(split="val", size=VAL_SIZE)
+    # This data is guaranteed to be unseen by the Student model.
+    unseen_data = GSM8K(split="test", size=VAL_SIZE+TEST_SIZE)
+
+    # We use scikit-learn's train_test_split to create a deterministic and
+    # reproducible split of the unseen data into our final validation and test sets.
+    val_data, test_data = train_test_split(
+        unseen_data,
+        test_size=TEST_SIZE,
+        random_state=SEED
+    )
 
     print(f"📊 Splits Loaded:")
     print(f"   - Train Set: {len(train_data)} samples")
