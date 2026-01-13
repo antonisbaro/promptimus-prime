@@ -28,7 +28,7 @@ from src.core.client import LocalLLMClient
 from src.tasks.gsm8k.config import (
     STUDENT_MODEL_NAME, 
     STUDENT_MODEL_KWARGS, 
-    TEST_SIZE, VAL_SIZE,
+    TRAIN_SIZE, TEST_SIZE, VAL_SIZE,
     OUTPUT_DIR, SEED
 )
 from src.tasks.gsm8k.task import GSM8KStudent
@@ -152,15 +152,15 @@ def run_evaluation():
     # during the training/validation phase.
     print(f"📚 Loading TEST Dataset...")
     # Load the same initial pool of unseen data from the official 'test' split.
-    unseen_data = GSM8K(split="test", size=VAL_SIZE+TEST_SIZE)
-    
-    # Apply the same deterministic split using the same `test_size` and `random_state`.
-    val_data, test_data = train_test_split(
+    unseen_data = GSM8K(split="test", size=TRAIN_SIZE+VAL_SIZE+TEST_SIZE)
+
+    # First, create the final, held-out Test Set.
+    temp_data, test_data = train_test_split(
         unseen_data,
         test_size=TEST_SIZE,
         random_state=SEED
     )
-
+    
     # -------------------------------------------------------------------------
     # 1. BASELINE EVALUATION (Default State)
     # -------------------------------------------------------------------------

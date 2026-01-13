@@ -133,27 +133,37 @@ def run_training():
     # -------------------------------------------------------------------------
     # 3. DATA LOADING 
     # -------------------------------------------------------------------------
-    # This section implements a robust data splitting strategy to prevent
-    # data leakage between the validation and test sets. Some models may have
-    # been trained on the official GSM8K training set, making the official
-    # validation split (derived from train) an unreliable measure of true
-    # performance.
-    
-    # To solve this, we create our own clean validation and test sets by
-    # splitting the official 'test' split, which models have not seen.
+    # This section implements the most robust data splitting strategy to
+    # prevent any form of data leakage and ensure a scientifically sound experiment.
+
+    # PROBLEM: Pre-trained models (like the Student) have likely seen the
+    # official GSM8K 'train' split. Using it for generating feedback (training)
+    # can result in too few errors, starving the Teacher of useful signals.
+
+    # SOLUTION: We derive ALL our splits (train, validation, and test) from the
+    # official 'test' split, which is guaranteed to be unseen by the models.
+    # This ensures that the Student is consistently challenged, generating a
+    # rich pool of errors for the Teacher to learn from.
     print(f"📚 Loading Datasets...")
     
-    # Load strict Train split
-    train_data = GSM8K(split="train", size=TRAIN_SIZE)
-    
-    # This data is guaranteed to be unseen by the Student model.
-    unseen_data = GSM8K(split="test", size=VAL_SIZE+TEST_SIZE)
+    # Load a large, single pool of unseen data from the official 'test' split.
+    # The size is the sum of all sets we intend to create.
+    unseen_data = GSM8K(split="test", size=TRAIN_SIZE+VAL_SIZE+TEST_SIZE)
 
-    # We use scikit-learn's train_test_split to create a deterministic and
-    # reproducible split of the unseen data into our final validation and test sets.
-    val_data, test_data = train_test_split(
+    # First, create the final, held-out Test Set.
+    # We deterministically split off `TEST_SIZE` samples. These will not be touched
+    # until the final evaluation. `random_state=SEED` ensures reproducibility.
+    temp_data, test_data = train_test_split(
         unseen_data,
         test_size=TEST_SIZE,
+        random_state=SEED
+    )
+
+    # Second, split the remaining pool into our new, clean Train and Validation sets.
+    # We again use the same SEED to ensure this inner split is also reproducible.
+    train_data, val_data = train_test_split(
+        temp_data,
+        test_size=VAL_SIZE, 
         random_state=SEED
     )
 
