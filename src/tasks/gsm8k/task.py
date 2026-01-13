@@ -113,7 +113,7 @@ class GSM8KStudent(adal.Component):
             # Specific, high-priority command for the optimizer.
             instruction_to_optimizer=(
                 "Your goal is to refine the core instruction for the agent. "
-                "Focus on defining a clear persona and a robust, high-level reasoning strategy (like 'think step-by-step'). "
+                "Focus on defining a clear persona and a robust, **HIGH-LEVEL REASONING STRATEGY**. "
                 "This parameter's content **MUST BE PURE INSTRUCTION AND REASONING STRATEGY**."
             ),
             # This helps the Critic to focus its feedback correctly.
