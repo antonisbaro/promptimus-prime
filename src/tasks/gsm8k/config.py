@@ -39,7 +39,7 @@ SEED = 42
 
 # NOTE: Keep these numbers small for Google Colab Free Tier (T4 GPU).
 # Increase them if running on stronger hardware (e.g., A100).
-TRAIN_SIZE = 100   # Number of samples for the optimization loop
+TRAIN_SIZE = 200   # Number of samples for the optimization loop
 VAL_SIZE = 100      # Number of samples for validating new prompts during training
 TEST_SIZE = 200    # Number of samples for the final 'evaluate.py' report
 
@@ -73,23 +73,39 @@ TEACHER_MODEL_KWARGS = {
     "max_new_tokens": 8192,
 }
 
+# In src/tasks/gsm8k/config.py
+
 # -----------------------------------------------------------------------------
 # TRAINING / OPTIMIZATION HYPERPARAMETERS
 # -----------------------------------------------------------------------------
 # Max Steps: How many optimization iterations (generations) to run.
-MAX_STEPS = 5 
+MAX_STEPS = 8
 
-# Train Batch Size (Optimization Logic):
-# Determines how many training samples are accumulated before the Optimizer performs an update.
-# - If set to 1 (Stochastic Mode): The Teacher critiques a single sample. If incorrect, 
-# it proposes an immediate prompt update. Best for fast, granular adaptation.
-# - If set > 1 (Mini-Batch Mode): The Teacher aggregates feedback from N samples 
-# and proposes one holistic update. Best for stability, but requires a larger context window.
-TRAIN_BATCH_SIZE = 4
+# -----------------------------------------------------------------------------
+# STUDENT FORWARD PASS CONFIGURATION (Per Step)
+# -----------------------------------------------------------------------------
+# Train Batch Size: How many NEW samples the Student processes in each step.
+# This determines how quickly the pool of observed errors ("the reservoir") fills up.
+# A larger size fills the reservoir faster but increases step time.
+TRAIN_BATCH_SIZE = 8
 
-# Number of Workers (Hardware Execution):
-# Strictly controls inference throughput and VRAM usage during the evaluation phase.
-# - Unlike Train Batch Size, this does NOT affect the optimization logic or results.
-# - It simply defines how many validation queries are processed in parallel on the GPU.
-# Keep it low for T4 GPUs to prevent Out-Of-Memory (OOM) errors and deadlocks.
+# Number of Workers for parallel processing during inference.
+# Keep this aligned with your hardware capabilities to avoid deadlocks.
 NUM_WORKERS = 4
+
+# -----------------------------------------------------------------------------
+# TEACHER BACKWARD PASS CONFIGURATION (Per Step)
+# -----------------------------------------------------------------------------
+# The Teacher's feedback is NOT based on the current train_batch. Instead, it's
+# based on a small, focused subset sampled from ALL previously seen examples.
+# These parameters control the composition of that feedback subset.
+
+# Max Error Samples: The maximum number of FAILED examples to randomly sample
+# from the reservoir to construct the feedback prompt for the Teacher.
+# This is the most critical signal for improvement.
+MAX_ERROR_SAMPLES = 2
+
+# Max Correct Samples: The maximum number of CORRECT examples to randomly sample.
+# These are included to give the Teacher context on what success looks like and
+# to prevent it from making changes that break already working patterns.
+MAX_CORRECT_SAMPLES = 2

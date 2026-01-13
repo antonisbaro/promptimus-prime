@@ -44,6 +44,7 @@ from src.tasks.gsm8k.config import (
     STUDENT_MODEL_KWARGS, TEACHER_MODEL_KWARGS,
     TRAIN_BATCH_SIZE, NUM_WORKERS, MAX_STEPS, 
     TRAIN_SIZE, VAL_SIZE, TEST_SIZE,
+    MAX_ERROR_SAMPLES, MAX_CORRECT_SAMPLES,
     CKPT_DIR, OUTPUT_DIR, SEED
 )
 from src.tasks.gsm8k.task import GSM8KStudent
@@ -185,6 +186,8 @@ def run_training():
         max_steps=MAX_STEPS,       
         num_workers=NUM_WORKERS,
         train_batch_size=TRAIN_BATCH_SIZE,
+        max_error_samples=MAX_ERROR_SAMPLES,
+        max_correct_samples=MAX_CORRECT_SAMPLES,
         ckpt_path=CKPT_DIR
     )
 
