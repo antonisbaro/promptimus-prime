@@ -92,4 +92,4 @@ TRAIN_BATCH_SIZE = 4
 # - Unlike Train Batch Size, this does NOT affect the optimization logic or results.
 # - It simply defines how many validation queries are processed in parallel on the GPU.
 # Keep it low for T4 GPUs to prevent Out-Of-Memory (OOM) errors.
-VAL_BATCH_SIZE = 16
+VAL_BATCH_SIZE = 32
