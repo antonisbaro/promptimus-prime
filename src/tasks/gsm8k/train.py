@@ -41,7 +41,7 @@ from src.core.client import LocalLLMClient
 from src.tasks.gsm8k.config import (
     STUDENT_MODEL_NAME, TEACHER_MODEL_NAME, 
     STUDENT_MODEL_KWARGS, TEACHER_MODEL_KWARGS,
-    TRAIN_BATCH_SIZE, VAL_BATCH_SIZE, MAX_STEPS, 
+    TRAIN_BATCH_SIZE, NUM_WORKERS, MAX_STEPS, 
     TRAIN_SIZE, VAL_SIZE,
     CKPT_DIR, OUTPUT_DIR
 )
@@ -156,7 +156,7 @@ def run_training():
         optimizer=optimizer,
         strategy="random", 
         max_steps=MAX_STEPS,       
-        batch_size=VAL_BATCH_SIZE,
+        num_workers=NUM_WORKERS,
         train_batch_size=TRAIN_BATCH_SIZE,
         ckpt_path=CKPT_DIR
     )

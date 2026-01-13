@@ -40,7 +40,7 @@ SEED = 42
 # NOTE: Keep these numbers small for Google Colab Free Tier (T4 GPU).
 # Increase them if running on stronger hardware (e.g., A100).
 TRAIN_SIZE = 100   # Number of samples for the optimization loop
-VAL_SIZE = 150      # Number of samples for validating new prompts during training
+VAL_SIZE = 100      # Number of samples for validating new prompts during training
 TEST_SIZE = 200    # Number of samples for the final 'evaluate.py' report
 
 # -----------------------------------------------------------------------------
@@ -87,9 +87,9 @@ MAX_STEPS = 5
 # and proposes one holistic update. Best for stability, but requires a larger context window.
 TRAIN_BATCH_SIZE = 4
 
-# Validation Batch Size (Hardware Execution):
+# Number of Workers (Hardware Execution):
 # Strictly controls inference throughput and VRAM usage during the evaluation phase.
 # - Unlike Train Batch Size, this does NOT affect the optimization logic or results.
 # - It simply defines how many validation queries are processed in parallel on the GPU.
-# Keep it low for T4 GPUs to prevent Out-Of-Memory (OOM) errors.
-VAL_BATCH_SIZE = 32
+# Keep it low for T4 GPUs to prevent Out-Of-Memory (OOM) errors and deadlocks.
+NUM_WORKERS = 4
