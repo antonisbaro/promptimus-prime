@@ -117,6 +117,11 @@ class GSM8KStudent(adal.Component):
                 "This parameter's content MUST be pure instruction. "
                 "It is STRICTLY FORBIDDEN to include ANY specific examples, as those belong in the 'demos' parameter."
             ),
+            # This helps the Critic to focus its feedback correctly.
+            instruction_to_backward_engine=(
+                "When assessing this parameter's fault, focus ONLY on its clarity, persona, and strategic direction. "
+                "Do not blame this parameter for lacking specific examples."
+            ),
             requires_opt=True,
             param_type=adal.ParameterType.PROMPT,
             name="instruction"
@@ -129,13 +134,18 @@ class GSM8KStudent(adal.Component):
             role_desc="Provides a list of Question-Reasoning-Answer examples for in-context learning.",
             # The actionable command for the optimizer.
             instruction_to_optimizer=(
-                "Your goal is to enrich and expand the existing list of few-shot examples. "
-                "You MUST preserve the existing examples that are working well. "
-                "Your primary task is to ADD completely NEW, well-crafted, Chain-of-Thought style examples to this list. "
-                "These new examples should demonstrate novel reasoning patterns or problem categories, "
-                "especially targeting the specific failures identified in the feedback. "
-                "Focus on broadening the diversity of the examples. "
+                "Your goal is to improve the list of few-shot examples. "
+                "Your response MUST be a complete, self-contained list of examples. "
+                "You must REPRODUCE any existing examples you wish to keep, and then ADD your completely NEW, "
+                "well-crafted, Chain-of-Thought style examples. "
+                "The new examples should target reasoning failures from the feedback and introduce novel scenarios. "
+                "Ensure the final list starts with '--- Example 1 ---', followed by '--- Example 2 ---', and so on. "
                 "The content MUST be only examples; it is STRICTLY FORBIDDEN to include general instructions here."
+            ),
+            # This helps the Critic to focus its feedback correctly.
+            instruction_to_backward_engine=(
+                "When assessing this parameter's fault, focus ONLY on the quality, relevance, and sufficiency of the provided examples. "
+                "Consider if a different or entirely new example was needed to prevent the error."
             ),
             requires_opt=True,
             param_type=adal.ParameterType.PROMPT,
@@ -152,6 +162,11 @@ class GSM8KStudent(adal.Component):
                 "This parameter is a fixed, non-trainable rule. You cannot change it. "
                 "You must ensure that any changes you propose to other parameters "
                 "still result in an output that respects this final formatting constraint."
+            ),
+            # This helps the Critic to focus its feedback correctly.
+            instruction_to_backward_engine=(
+                "When assessing this parameter's fault, check ONLY if the Student's final output failed to adhere to this strict formatting rule. "
+                "Do not blame this parameter for logical errors in the reasoning."
             ),
             requires_opt=False,
             param_type=adal.ParameterType.PROMPT,
