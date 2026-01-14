@@ -45,6 +45,7 @@ from src.tasks.gsm8k.config import (
     TRAIN_BATCH_SIZE, NUM_WORKERS, MAX_STEPS, 
     TRAIN_SIZE, VAL_SIZE, TEST_SIZE,
     MAX_ERROR_SAMPLES, MAX_CORRECT_SAMPLES,
+    MODEL_LOAD_KWARGS,
     CKPT_DIR, OUTPUT_DIR, SEED
 )
 from src.tasks.gsm8k.task import GSM8KStudent
@@ -99,9 +100,19 @@ def run_training():
     # -------------------------------------------------------------------------
     # These clients handle 4-bit loading and strict chat templating.
     print("👨‍🎓 Initializing Student Client...")
-    student_client = LocalLLMClient(model_name=STUDENT_MODEL_NAME)
+    student_load_kwargs = MODEL_LOAD_KWARGS.get(STUDENT_MODEL_NAME, {})
+    student_client = LocalLLMClient(
+        model_name=STUDENT_MODEL_NAME,
+        quantize=False, 
+        model_load_kwargs=student_load_kwargs
+    )
     print("👨‍🏫 Initializing Teacher Client...")
-    teacher_client = LocalLLMClient(model_name=TEACHER_MODEL_NAME)
+    teacher_load_kwargs = MODEL_LOAD_KWARGS.get(TEACHER_MODEL_NAME, {})
+    teacher_client = LocalLLMClient(
+        model_name=TEACHER_MODEL_NAME,
+        quantize=True, 
+        model_load_kwargs=teacher_load_kwargs
+    )
 
     # -------------------------------------------------------------------------
     # 2. SETUP COMPONENTS

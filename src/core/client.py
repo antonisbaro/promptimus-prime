@@ -29,60 +29,103 @@ log = logging.getLogger(__name__)
 
 class LocalLLMClient(ModelClient):
     """
-    A custom AdalFlow client wrapper for Hugging Face Transformers models.
+    A truly generic, custom AdalFlow client wrapper for Hugging Face Transformers models.
     
-    This client is designed to run large language models locally with optimizations 
-    suitable for limited hardware resources (e.g., Google Colab free tier).
+    This client is designed to be robust and adaptable, handling various model-specific
+    requirements automatically.
 
     Key Features:
-    - **4-bit Quantization (NF4):** Reduces VRAM usage via BitsAndBytes.
-    - **Strict Chat Templating:** Ensures compatibility with Instruct models (e.g., Qwen, Llama).
-    - **Robust Output Parsing:** Handles raw string outputs and cleans XML tags often injected 
-      by prompt optimizers.
+    - **Conditional Quantization:** Supports loading models in 4-bit (for large models)
+      or native bfloat16 (for smaller models).
+    - **Flexible Loading Args:** Allows passing custom `from_pretrained` arguments
+      to handle model-specific workarounds (e.g., for Phi-3).
+    - **Smart Role Handling:** Automatically detects if a model supports a `system`
+      role and adjusts the prompt format accordingly.
     """
 
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str, quantize: bool = True, model_load_kwargs: Dict = {}):
         """
-        Initialize the client with a specific model identifier.
+        Initialize the client with a specific model and loading configuration.
 
         Args:
-            model_name (str): The Hugging Face model ID (e.g., 'Qwen/Qwen2.5-1.5B-Instruct').
+            model_name (str): The Hugging Face model ID.
+            quantize (bool): If True, loads the model with 4-bit quantization.
+                             If False, loads in its native bfloat16 precision.
+                             Defaults to True.
+            model_load_kwargs (Dict): Extra arguments for model loading (e.g., attn_implementation).
         """
         super().__init__()
         self.model_name = model_name
+        self.quantize = quantize
+        self.model_load_kwargs = model_load_kwargs
         self.tokenizer = None
         self.model = None
-        
-        # Initialize the model immediately upon instantiation
+
+        # This flag will be set during initialization based on the model's capabilities.
+        self.supports_system_role = False
+
+        # Initialize the model immediately upon instantiation        
         self._initialize_model()
 
     def _initialize_model(self):
         """
-        Loads the model and tokenizer from Hugging Face with 4-bit quantization configuration.
+        Loads the model and tokenizer from Hugging Face, applying quantization
+        conditionally based on the `self.quantize` flag.
         """
-        log.info(f"Loading {self.model_name} with BitsAndBytes NF4 config...")
-        
-        # Configure 4-bit quantization to fit models into consumer GPU memory (T4/L4)
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_compute_dtype=torch.bfloat16
-        )
+        log.info(f"Loading model: {self.model_name}...")
+       
+        # This dictionary will hold all arguments for the .from_pretrained call.
+        load_args = {
+            "device_map": "auto",
+            "trust_remote_code": True,
+            **self.model_load_kwargs
+        }
+
+        if self.quantize:
+            # --- Option 1: 4-bit Quantization (Low VRAM Mode) ---
+            # Ideal for large models (like the Teacher) on limited hardware.
+            # This significantly reduces memory footprint at a small cost to precision.
+            log.info("4️⃣ Mode: 4-bit Quantization (Low VRAM)")
+            bnb_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_compute_dtype=torch.bfloat16
+            )
+            load_args["quantization_config"] = bnb_config
+        else:
+            # --- Option 2: Native bfloat16 Precision (High Accuracy Mode) ---
+            # Ideal for smaller models (like the Student) that fit easily in VRAM.
+            # This uses the model's standard precision for maximum performance.
+            log.info("🛜 Mode: Native bfloat16 Precision (High Accuracy)")
+            load_args["torch_dtype"] = torch.bfloat16
 
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_name, 
+                self.model_name,
                 trust_remote_code=True
             )
+           
+            # Load the model using the dynamically constructed arguments
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
-                quantization_config=bnb_config,
-                device_map="auto", # Automatically distributes model across available GPUs/CPU
-                trust_remote_code=True
+                **load_args
             )
+
+            # Capability Diagnosis
+            # Check the model's chat template to see if it supports the 'system' role.
+            chat_template = getattr(self.tokenizer, 'chat_template', None)
+            if chat_template and 'system' in chat_template:
+                self.supports_system_role = True
+                log.info(f"🤓 Capability: System role is SUPPORTED.")
+            else:
+                self.supports_system_role = False
+                log.warning(f"🤪 Capability: System role is NOT SUPPORTED by this model. Prompts will be merged.")
+
+            log.info(f"✅ Successfully loaded {self.model_name}")
+            
         except Exception as e:
-            log.error(f"Failed to load model {self.model_name}: {e}")
+            log.error(f"❌ Failed to load model {self.model_name}: {e}")
             raise e
 
     def convert_inputs_to_api_kwargs(
@@ -176,6 +219,9 @@ class LocalLLMClient(ModelClient):
             system_prompt = full_prompt_str[sys_start_idx + len(sys_start_tag):sys_end_idx].strip()
             user_prompt = full_prompt_str[sys_end_idx + len(sys_end_tag):].strip()
 
+            # As a final cleanup, remove the user tags themselves from the content.
+            user_prompt = user_prompt.replace("<START_OF_USER>", "").replace("<END_OF_USER>", "").strip()
+
         # Construct the Final `messages` Array
         messages = []
         
@@ -186,12 +232,19 @@ class LocalLLMClient(ModelClient):
         if "messages" in api_kwargs: # For special optimizer cases
             messages = api_kwargs["messages"]
         else:
-            if system_prompt:
+            if system_prompt and self.supports_system_role:
+                # Case A: Model supports system role. Create a two-part message list.
                 messages.append({"role": "system", "content": system_prompt})
-            if user_prompt:
-                # As a final cleanup, remove the user tags themselves from the content.
-                user_prompt = user_prompt.replace("<START_OF_USER>", "").replace("<END_OF_USER>", "").strip()
-                messages.append({"role": "user", "content": user_prompt})
+                if user_prompt:
+                    # As a final cleanup, remove the user tags themselves from the content.
+                    #user_prompt = user_prompt.replace("<START_OF_USER>", "").replace("<END_OF_USER>", "").strip()
+                    messages.append({"role": "user", "content": user_prompt})
+            else:
+                # Case B: Model does not support system role (or no system prompt was given).
+                # Combine everything into a single user prompt.
+                combined_prompt = f"{system_prompt}\n\n{user_prompt}".strip() if system_prompt else user_prompt
+                if combined_prompt:
+                    messages.append({"role": "user", "content": combined_prompt})
 
         if not messages:
             log.warning("No messages provided to LocalLLMClient. Returning empty string.")

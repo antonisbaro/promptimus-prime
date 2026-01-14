@@ -11,10 +11,12 @@ Usage:
     from src.tasks.gsm8k.config import STUDENT_MODEL_NAME, TRAIN_SIZE, ...
 """
 
+import os
+import torch
+
 # -----------------------------------------------------------------------------
 # OUTPUT PATHS
 # -----------------------------------------------------------------------------
-import os
 
 # Base directory for all GSM8K artifacts
 OUTPUT_DIR = "outputs/gsm8k"
@@ -53,6 +55,22 @@ STUDENT_MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
 # Teacher: The "Backward Engine" and "Optimizer".
 # We use a stronger 7B model to provide high-quality feedback and prompt edits.
 TEACHER_MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
+
+# -----------------------------------------------------------------------------
+# MODEL LOADING PARAMETERS
+# -----------------------------------------------------------------------------
+# This dictionary contains special arguments passed to the .from_pretrained()
+# method. It is used to handle model-specific workarounds or optimizations.
+
+MODEL_LOAD_KWARGS = {
+    "microsoft/Phi-3-mini-4k-instruct": {
+        # This resolves a known compatibility issue between Phi-3 and certain
+        # versions of transformers/accelerate when using `device_map="auto"`.
+        "attn_implementation": "eager",
+    },
+    # Add other model-specific loading flags here if needed in the future.
+    # "some/other-model": { "some_flag": True }
+}
 
 # -----------------------------------------------------------------------------
 # GENERATION PARAMETERS
