@@ -108,7 +108,7 @@ MAX_STEPS = 8
 # Train Batch Size: How many NEW samples the Student processes in each step.
 # This determines how quickly the pool of observed errors ("the reservoir") fills up.
 # A larger size fills the reservoir faster but increases step time.
-TRAIN_BATCH_SIZE = 8
+TRAIN_BATCH_SIZE = 4
 
 # Number of Workers for parallel processing during inference.
 # Keep this aligned with your hardware capabilities to avoid deadlocks.

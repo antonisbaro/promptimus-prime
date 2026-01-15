@@ -103,7 +103,7 @@ def run_training():
     student_load_kwargs = MODEL_LOAD_KWARGS.get(STUDENT_MODEL_NAME, {})
     student_client = LocalLLMClient(
         model_name=STUDENT_MODEL_NAME,
-        quantize=False, 
+        quantize=True, 
         model_load_kwargs=student_load_kwargs
     )
     print("👨‍🏫 Initializing Teacher Client...")
