@@ -55,20 +55,25 @@ class GSM8KTrainingPipeline(adal.AdalComponent):
         # 2. Configure the Teacher (Backward Engine)
         # We wrap the config in a dictionary required by AdalFlow's internal checks.
 
-        # Role Tagging for Verbosity
-        # This allows our custom logger in the client to identify that this
-        # specific model call is being made by the BackwardEngine.
+        # Config for the "Critic" role (BackwardEngine)
         backward_engine_kwargs = teacher_model_kwargs.copy()
         backward_engine_kwargs['caller_role'] = '📋 BackwardEngine'
-        
-        teacher_config = {
+        backward_engine_config = {
             "model_client": teacher_client,
-            "model_kwargs": backward_engine_kwargs 
+            "model_kwargs": backward_engine_kwargs
+        }
+
+        # Config for the "Creator" role (Optimizer)
+        optimizer_kwargs = teacher_model_kwargs.copy()
+        optimizer_kwargs['caller_role'] = '🧠 Optimizer'
+        optimizer_config = {
+            "model_client": teacher_client,
+            "model_kwargs": optimizer_kwargs
         }
 
         # Manually instantiate the BackwardEngine.
         log.info("🛠️  Instantiating BackwardEngine manually...")
-        backward_engine = BackwardEngine(**teacher_config)
+        backward_engine = BackwardEngine(**backward_engine_config)
 
         # 3. Define the Loss Function (Textual Gradient)
         # This component uses the Teacher (BackwardEngine) to translate a
@@ -104,8 +109,8 @@ class GSM8KTrainingPipeline(adal.AdalComponent):
             task=student_task,
             eval_fn=eval_fn,
             loss_fn=loss_fn,
-            text_optimizer_model_config=teacher_config,
-            backward_engine_model_config=teacher_config,
+            text_optimizer_model_config=optimizer_config,
+            backward_engine_model_config=backward_engine_config,
         )
 
         # Manually inject the engine after initialization to ensure it's available.
