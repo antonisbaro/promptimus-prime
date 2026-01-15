@@ -212,9 +212,9 @@ class GSM8KStudent(adal.Component):
         """
         return self.generator(
             prompt_kwargs={
-                "instruction": self.instruction.data,
-                "demos": self.demos.data,
-                "output_format": self.output_format.data,
+                "instruction": self.instruction,
+                "demos": self.demos,
+                "output_format": self.output_format,
                 "input_str": question
             },
             id=id
