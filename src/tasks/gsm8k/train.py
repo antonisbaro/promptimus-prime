@@ -136,10 +136,16 @@ def run_training():
     )
 
     print(f"🧠 Setting up Optimizer...")
+    # Role Tagging for Verbosity
+    # This tag will be passed down to the client, allowing our custom
+    # logger to identify that this specific model call is being made by the Optimizer.
+    optimizer_model_kwargs = TEACHER_MODEL_KWARGS.copy()
+    optimizer_model_kwargs['caller_role'] = '🧠 Optimizer'
+    
     optimizer = TGDOptimizer(
         params=student_task.parameters(), 
         model_client=teacher_client,      # The Teacher generates the updates
-        model_kwargs=TEACHER_MODEL_KWARGS
+        model_kwargs=optimizer_model_kwargs
     )
 
     # -------------------------------------------------------------------------

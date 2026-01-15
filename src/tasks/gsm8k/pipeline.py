@@ -54,9 +54,16 @@ class GSM8KTrainingPipeline(adal.AdalComponent):
 
         # 2. Configure the Teacher (Backward Engine)
         # We wrap the config in a dictionary required by AdalFlow's internal checks.
+
+        # Role Tagging for Verbosity
+        # This allows our custom logger in the client to identify that this
+        # specific model call is being made by the BackwardEngine.
+        backward_engine_kwargs = teacher_model_kwargs.copy()
+        backward_engine_kwargs['caller_role'] = '📋 BackwardEngine'
+        
         teacher_config = {
             "model_client": teacher_client,
-            "model_kwargs": teacher_model_kwargs
+            "model_kwargs": backward_engine_kwargs 
         }
 
         # Manually instantiate the BackwardEngine.
@@ -136,7 +143,7 @@ class GSM8KTrainingPipeline(adal.AdalComponent):
         should_log = (not self.training) or (random.random() < 0.2)
 
         if should_log:
-            print("\n" + "━"*60)
+            print("\n" + "━"*80)
             q_text = sample.question.strip()
             print(f"📘 QUESTION: {q_text}")
             
@@ -145,7 +152,7 @@ class GSM8KTrainingPipeline(adal.AdalComponent):
             
             print(f"🎯 PARSED: '{parsed_answer}' | GT: '{ground_truth}'")
             print(f"RESULT: {status}")
-            print("━"*60 + "\n")
+            print("━"*80 + "\n")
 
         return self.eval_fn, {"y": parsed_answer, "y_gt": ground_truth}
 

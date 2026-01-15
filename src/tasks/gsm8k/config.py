@@ -31,6 +31,9 @@ CKPT_DIR = os.path.join(OUTPUT_DIR, "ckpt")
 # Setting a seed ensures reproducibility for dataset shuffling and splitting.
 SEED = 42
 
+# Set to True to enable detailed logging of Teacher (Optimizer/Backward) and Student prompts
+PROMPTS_VERBOSITY = False
+
 # -----------------------------------------------------------------------------
 # DATASET CONFIGURATION
 # -----------------------------------------------------------------------------

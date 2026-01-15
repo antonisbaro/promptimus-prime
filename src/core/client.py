@@ -16,6 +16,7 @@ import logging
 import torch
 import re
 from typing import Any, Dict, Optional, List
+from src.tasks.gsm8k.config import PROMPTS_VERBOSITY
 
 # Third-party libraries
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
@@ -120,7 +121,7 @@ class LocalLLMClient(ModelClient):
                 log.info(f"🤓 Capability: System role is SUPPORTED.")
             else:
                 self.supports_system_role = False
-                log.warning(f"🤪 Capability: System role is NOT SUPPORTED by this model. Prompts will be merged.")
+                log.info(f"🤪 Capability: System role is NOT SUPPORTED by this model. Prompts will be merged.")
 
             log.info(f"✅ Successfully loaded {self.model_name}")
             
@@ -201,6 +202,10 @@ class LocalLLMClient(ModelClient):
         full_prompt_str = api_kwargs.get("input_str", "")
         gen_kwargs = api_kwargs.get("model_kwargs", {})
 
+        # Pop the custom role tag for logging purposes. This removes it from `gen_kwargs`
+        # so it's not passed to the underlying `model.generate` call, which would cause an error.
+        caller_role = gen_kwargs.pop("caller_role", "Unknown")
+
         system_prompt = ""
         user_prompt = full_prompt_str # Default: assume the whole prompt is a user message
 
@@ -247,7 +252,7 @@ class LocalLLMClient(ModelClient):
                     messages.append({"role": "user", "content": combined_prompt})
 
         if not messages:
-            log.warning("No messages provided to LocalLLMClient. Returning empty string.")
+            log.warning(f"[{caller_role}] - No messages constructed. Skipping call.")
             return "" 
 
         try:
@@ -258,6 +263,15 @@ class LocalLLMClient(ModelClient):
                 add_generation_prompt=True
             )
 
+            # If the global verbosity flag is enabled, print the detailed prompt.
+            if PROMPTS_VERBOSITY:
+                log.info("\n" + "━"*80 +
+                         f"\n>>> FINAL RENDERED PROMPT | CALLER: [{caller_role}] | MODEL: [{self.model_name}] <<<\n" +
+                         "---\n" +
+                         text_input +
+                         "\n---" +
+                         "\n" + "━"*80 + "\n")
+                
             # Tokenize and move to device
             model_inputs = self.tokenizer([text_input], return_tensors="pt").to(self.model.device)
 

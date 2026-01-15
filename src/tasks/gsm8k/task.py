@@ -170,11 +170,18 @@ class GSM8KStudent(adal.Component):
             name="output_format"
         )
 
+        # Role Tagging for Verbosity
+        # We add a 'caller_role' tag to the student's kwargs. This allows our
+        # custom logger in the client to identify calls made by the Student.
+        student_model_kwargs = model_kwargs.copy()
+        student_model_kwargs['caller_role'] = '🧑‍🎓 Student'
+        self.model_kwargs = student_model_kwargs
+
         # Initialize Generator with Compound Template
         # We explicitly structure the prompt using the three peers.
         self.generator = adal.Generator(
             model_client=student_client,
-            model_kwargs=model_kwargs,
+            model_kwargs=self.model_kwargs,
             template="""<START_OF_SYSTEM_PROMPT>
 <INSTRUCTION>
 {{instruction}}
