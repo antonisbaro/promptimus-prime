@@ -1,14 +1,31 @@
 """
-GSM8K Training Pipeline.
+GSM8K Training Pipeline Configuration.
 
-This module defines the `GSM8KTrainingPipeline`, which acts as the central
-orchestrator for the training loop. It connects:
-1. The Student (Generator) -> Produces answers.
-2. The Evaluator -> Scores answers (0 or 1).
-3. The Teacher (Loss/Backward Engine) -> Explains *why* an answer was wrong.
+This module defines the `GSM8KTrainingPipeline`, a central component that
+configures and connects all moving parts of the LLM-AutoDiff training loop.
+By inheriting from `adal.AdalComponent`, it provides the `adal.Trainer` with
+all the necessary configurations to automatically instantiate and manage the
+entire optimization process.
 
-It also handles verbose logging to visualize the chain-of-thought and the 
-optimization process in real-time.
+Key Responsibilities:
+
+1.  **Optimizer Configuration:**
+    - It defines the model configuration (`text_optimizer_model_config`) that
+      the `Trainer` will use to internally create the `TGDOptimizer`.
+      
+2.  **Backward Engine Configuration:**
+    - It similarly defines the configuration for the `BackwardEngine` (the "Critic"),
+      ensuring it uses the correct model and logging tag.
+    - It instantiates the `BackwardEngine` and the `EvalFnToTextLoss` component.
+
+3.  **Backpropagation Wiring:**
+    - It performs the essential step of attaching the `BackwardEngine` to the
+      Student's `generator`. This "connects the wires" and allows the textual
+      gradient to flow from the final output back to the prompt parameters.
+
+4.  **Component Assembly:**
+    - It bundles the Student task, the evaluation metric, and the loss function
+      into a single `AdalComponent` that the `Trainer` can execute.
 """
 
 import random
@@ -52,12 +69,12 @@ class GSM8KTrainingPipeline(adal.AdalComponent):
         # We use 'exact_match' to compare the parsed number against the ground truth.
         eval_fn = AnswerMatchAcc(type="exact_match").compute_single_item
 
-        # 2. Configure the Teacher (Backward Engine)
+        # 2. Configure the Teacher
         # We wrap the config in a dictionary required by AdalFlow's internal checks.
 
         # Config for the "Critic" role (BackwardEngine)
         backward_engine_kwargs = teacher_model_kwargs.copy()
-        backward_engine_kwargs['caller_role'] = '📋 BackwardEngine'
+        backward_engine_kwargs['caller_role'] = '📋 Critic (BackwardEngine)'
         backward_engine_config = {
             "model_client": teacher_client,
             "model_kwargs": backward_engine_kwargs
@@ -65,7 +82,7 @@ class GSM8KTrainingPipeline(adal.AdalComponent):
 
         # Config for the "Creator" role (Optimizer)
         optimizer_kwargs = teacher_model_kwargs.copy()
-        optimizer_kwargs['caller_role'] = '🧠 Optimizer'
+        optimizer_kwargs['caller_role'] = '🧠 Creator (Optimizer)'
         optimizer_config = {
             "model_client": teacher_client,
             "model_kwargs": optimizer_kwargs

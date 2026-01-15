@@ -45,7 +45,7 @@ from src.tasks.gsm8k.config import (
     TRAIN_BATCH_SIZE, NUM_WORKERS, MAX_STEPS, 
     TRAIN_SIZE, VAL_SIZE, TEST_SIZE,
     MAX_ERROR_SAMPLES, MAX_CORRECT_SAMPLES,
-    MODEL_LOAD_KWARGS,
+    MODEL_LOAD_KWARGS, OPTIMIZER_KWARGS,
     CKPT_DIR, OUTPUT_DIR, SEED
 )
 from src.tasks.gsm8k.task import GSM8KStudent
@@ -88,7 +88,7 @@ def run_training():
     Workflow:
     1. **Initialization:** Sets up 4-bit Quantized Student and Teacher models.
     2. **Component Assembly:** Initializes the `GSM8KStudent` with Peer Nodes and connects it 
-       to the `GSM8KTrainingPipeline` and `TGDOptimizer`.
+       to the `GSM8KTrainingPipeline`.
     3. **Data Preparation:** Loads and splits the dataset into strict Train and Validation sets.
     4. **Execution:** Instantiates the `adal.Trainer` with custom checkpoint paths and executes 
        the training loop (with resume capability).
@@ -128,24 +128,11 @@ def run_training():
     initial_demos = student_task.demos.data
     initial_format = student_task.output_format.data
 
-    print(f"🛠️  Building Training Pipeline...")
+    print(f"🛠️ Building Training Pipeline...")
     pipeline = GSM8KTrainingPipeline(
         student_task=student_task,
         teacher_client=teacher_client,
         teacher_model_kwargs=TEACHER_MODEL_KWARGS
-    )
-
-    print(f"🧠 Setting up Optimizer...")
-    # Role Tagging for Verbosity
-    # This tag will be passed down to the client, allowing our custom
-    # logger to identify that this specific model call is being made by the Optimizer.
-    optimizer_model_kwargs = TEACHER_MODEL_KWARGS.copy()
-    optimizer_model_kwargs['caller_role'] = '🧠 Optimizer'
-    
-    optimizer = TGDOptimizer(
-        params=student_task.parameters(), 
-        model_client=teacher_client,      # The Teacher generates the updates
-        model_kwargs=optimizer_model_kwargs
     )
 
     # -------------------------------------------------------------------------
@@ -198,13 +185,13 @@ def run_training():
 
     trainer = adal.Trainer(
         adaltask=pipeline,
-        optimizer=optimizer,
         strategy="random", 
         max_steps=MAX_STEPS,       
         num_workers=NUM_WORKERS,
         train_batch_size=TRAIN_BATCH_SIZE,
         max_error_samples=MAX_ERROR_SAMPLES,
         max_correct_samples=MAX_CORRECT_SAMPLES,
+        text_optimizers_config_kwargs=OPTIMIZER_KWARGS,
         ckpt_path=CKPT_DIR
     )
 

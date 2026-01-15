@@ -115,6 +115,25 @@ TRAIN_BATCH_SIZE = 4
 NUM_WORKERS = 4
 
 # -----------------------------------------------------------------------------
+# OPTIMIZER CONFIGURATION
+# -----------------------------------------------------------------------------
+# This dictionary contains all specific arguments for the TGDOptimizer.
+# These parameters control the complexity and context size of the prompt
+# sent to the Teacher LLM when it acts as the "Creator" (Optimizer)
+OPTIMIZER_KWARGS = {
+
+    # Controls how many of the best-performing past prompts are included
+    # in the context for the Teacher. A higher number gives the Teacher more
+    # historical context but significantly increases the input prompt size.
+    "max_past_history": 2,
+
+    # Controls how many recent failed proposals are shown to the Teacher.
+    # This helps the Teacher avoid repeating the same mistakes. A higher
+    # number provides more negative feedback but also increases prompt size.
+    "max_failed_proposals": 2,
+}
+
+# -----------------------------------------------------------------------------
 # TEACHER BACKWARD PASS CONFIGURATION (Per Step)
 # -----------------------------------------------------------------------------
 # The Teacher's feedback is NOT based on the current train_batch. Instead, it's
