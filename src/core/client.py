@@ -114,14 +114,26 @@ class LocalLLMClient(ModelClient):
             )
 
             # Capability Diagnosis
-            # Check the model's chat template to see if it supports the 'system' role.
-            chat_template = getattr(self.tokenizer, 'chat_template', None)
-            if chat_template and 'system' in chat_template:
+            # We perform a safe "dry run" of the apply_chat_template function.
+            # This is the most reliable way to determine if a model truly supports the system role.
+            try:
+                # We create a dummy message list with a system role.
+                test_messages = [
+                    {"role": "system", "content": "Test system message."},
+                    {"role": "user", "content": "Test user message."}
+                ]
+                
+                # We try to apply the chat template.
+                self.tokenizer.apply_chat_template(test_messages, tokenize=False)
+                
+                # If the line above executes without an error, the system role is supported.
                 self.supports_system_role = True
-                log.info(f"🤓 Capability: System role is SUPPORTED.")
-            else:
+                log.info(f"Capability: 🤓 System role is SUPPORTED.")
+
+            except Exception as e:
+                # If an error occurs we know the system role is not supported.
                 self.supports_system_role = False
-                log.info(f"🤪 Capability: System role is NOT SUPPORTED by this model. Prompts will be merged.")
+                log.info(f"Capability: 🤪 System role is NOT SUPPORTED by this model. Prompts will be merged. (Reason: {e})")
 
             log.info(f"✅ Successfully loaded {self.model_name}")
             
@@ -241,8 +253,6 @@ class LocalLLMClient(ModelClient):
                 # Case A: Model supports system role. Create a two-part message list.
                 messages.append({"role": "system", "content": system_prompt})
                 if user_prompt:
-                    # As a final cleanup, remove the user tags themselves from the content.
-                    #user_prompt = user_prompt.replace("<START_OF_USER>", "").replace("<END_OF_USER>", "").strip()
                     messages.append({"role": "user", "content": user_prompt})
             else:
                 # Case B: Model does not support system role (or no system prompt was given).
