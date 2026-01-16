@@ -109,16 +109,31 @@ class GSM8KStudent(adal.Component):
         self.instruction = adal.Parameter(
             data=load_prompt_file("instruction.txt", "You are a helpful math assistant. Solve the problem step by step."),
             # General description of the parameter's role.
-            role_desc="Defines the agent's high-level persona and core mission (e.g., 'You are a math expert').",
+            role_desc=(
+                "Defines the agent's persona and high-level reasoning strategy. "
+                "This is the place for general, abstract instructions."
+            ),
             # Specific, high-priority command for the optimizer.
             instruction_to_optimizer=(
-                "Your goal is to refine the core instruction for the agent. "
-                "Focus on defining a clear persona and a robust, **HIGH-LEVEL REASONING STRATEGY**. "
-                "This parameter's content **MUST BE PURE INSTRUCTION AND REASONING STRATEGY**."
+                "Your goal is to refine the agent's core rulebook. This parameter defines its "
+                "**HIGH-LEVEL REASONING STRATEGY**. "
+    
+                "Focus on writing **GENERAL, ABSTRACT INSTRUCTIONS** that guide the problem-solving "
+                "process, rather than solving a specific problem. For example, you could add strategic "
+                "rules like 'Always identify all quantities and their relationships before calculating' or "
+                "'Before answering, double-check that your solution addresses the original question'. "
+    
+                "The content **MUST BE PURE INSTRUCTIONS AND REASONING STRATEGY**. "
+                "Specific examples with numbers are strictly forbidden in this parameter; they belong in the 'demos' parameter."
             ),
             # This helps the Critic to focus its feedback correctly.
             instruction_to_backward_engine=(
-                "When assessing this parameter's fault, focus ONLY on its clarity, persona, and strategic direction. "
+                "Assess this parameter's fault. Your critique MUST focus ONLY on the quality of the high-level strategy. "
+                "Ask yourself: "
+                "1. Is the instruction **clear and unambiguous**? "
+                "2. Is the strategy **general enough** to apply to many problems? "
+                "3. Could a **better or more robust high-level instruction** have prevented the student's error? "
+                "Do NOT criticize this parameter for lacking specific examples."
             ),
             requires_opt=True,
             param_type=adal.ParameterType.PROMPT,
@@ -129,21 +144,31 @@ class GSM8KStudent(adal.Component):
         self.demos = adal.Parameter(
             data=load_prompt_file("demos.txt", ""),
             # General description of what this parameter is.
-            role_desc="Provides a list of Question-Reasoning-Answer examples for in-context learning.",
+            role_desc="Provides a small, high-quality list of Chain-of-Thought examples.",
             # The actionable command for the optimizer.
             instruction_to_optimizer=(
-                "Your goal is to improve the list of few-shot examples. "
-                "Your response MUST be a complete, self-contained list of examples. "
-                "You must REPRODUCE any existing examples you wish to keep, and then ADD your completely NEW AND DIVERSE, "
-                "well-crafted, Chain-of-Thought style examples. "
-                "The new examples should target reasoning failures from the feedback and introduce **DIVERSE AND NOVEL REASONING PATTERNS**. "
-                "Ensure the final list starts with '--- Example 1 ---', followed by '--- Example 2 ---', and so on. "
-                "This parameter's content MUST BE ONLY EXAMPLES."
+                "Your goal is to curate a small but powerful list of few-shot examples. "
+                "Your response for this parameter MUST be a complete, self-contained list that will overwrite the previous one. "
+                "The list should **NEVER EXCEED 4 EXAMPLES**. Quality over quantity is the absolute priority. "
+    
+                "To improve the list, you have three primary actions: **ADD**, **REVISE**, or **REPLACE**. "
+                "Your action should be guided by the feedback. For instance: "
+                "- If the existing examples are good but insufficient, **ADD** a completely NEW example that teaches a novel reasoning pattern. "
+                "- If an existing example is relevant but unclear, **REVISE** it to improve its clarity and reasoning. "
+                "- If an existing example is irrelevant or weak, **REPLACE** it with a better, more targeted one. "
+    
+                "If you keep any existing examples, you **must REPRODUCE them** in your new list. "
+                "Ensure the final list is correctly formatted ('--- Example 1 ---', etc.). "
+                "This parameter's content MUST BE ONLY (AT MOST 4) EXAMPLES."
             ),
             # This helps the Critic to focus its feedback correctly.
             instruction_to_backward_engine=(
-                "When assessing this parameter's fault, focus ONLY on the quality, relevance, and sufficiency of the provided examples. "
-                "Consider if a different or entirely new and diverse example was needed to prevent the error."
+                "Assess this parameter's fault. Your critique MUST focus ONLY on the **quality, relevance, and educational value** of the examples. "
+                "Ask yourself: "
+                "1. Is the list of examples **concise and powerful**? Does every example serve a unique purpose? "
+                "2. Is the reasoning in each example **correct and easy to follow**? "
+                "3. Could a **different or entirely new example** have been more effective at preventing the student's specific error? "
+                "Do NOT criticize this parameter for lacking general instructions."
             ),
             requires_opt=True,
             param_type=adal.ParameterType.PROMPT,
