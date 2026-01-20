@@ -115,7 +115,7 @@ class GSM8KStudent(adal.Component):
             ),
             # Specific, high-priority command for the optimizer.
             instruction_to_optimizer=(
-                "Your goal is to refine the agent's core rulebook. This parameter defines its "
+                "Your goal is to refine the agent's **CORE RULEBOOK**. This parameter defines its "
                 "**HIGH-LEVEL REASONING STRATEGY**. "
     
                 "Focus on writing **GENERAL, ABSTRACT INSTRUCTIONS** that guide the problem-solving "
@@ -123,8 +123,8 @@ class GSM8KStudent(adal.Component):
                 "rules like 'Always identify all quantities and their relationships before calculating' or "
                 "'Before answering, double-check that your solution addresses the original question'. "
     
-                "The content **MUST BE PURE INSTRUCTIONS AND REASONING STRATEGY**. "
-                "Specific examples with numbers are strictly forbidden in this parameter; they belong in the 'demos' parameter."
+                "The content **MUST BE PURE GENERAL INSTRUCTIONS AND REASONING STRATEGY**. "
+                "**NO EXAMPLES**: Do not include specific math problems here. Use abstract rules only. "
             ),
             # This helps the Critic to focus its feedback correctly.
             instruction_to_backward_engine=(
@@ -133,7 +133,8 @@ class GSM8KStudent(adal.Component):
                 "1. Is the instruction **clear and unambiguous**? "
                 "2. Is the strategy **general enough** to apply to many problems? "
                 "3. Could a **better or more robust high-level instruction** have prevented the student's error? "
-                "Do NOT criticize this parameter for lacking specific examples."
+
+                "If the answer to (3) is YES, explicitly state **what general rule or advice is missing** "
             ),
             requires_opt=True,
             param_type=adal.ParameterType.PROMPT,
@@ -149,26 +150,34 @@ class GSM8KStudent(adal.Component):
             instruction_to_optimizer=(
                 "Your goal is to curate a small but powerful list of few-shot examples. "
                 "Your response for this parameter MUST be a complete, self-contained list that will overwrite the previous one. "
-                "The list should **NEVER EXCEED 4 EXAMPLES**. Quality over quantity is the absolute priority. "
-    
+                "The list should **NEVER EXCEED 5 EXAMPLES**. Quality over quantity is the absolute priority. "
+
                 "To improve the list, you have three primary actions: **ADD**, **REVISE**, or **REPLACE**. "
-                "Your action should be guided by the feedback. For instance: "
-                "- If the existing examples are good but insufficient, **ADD** a completely NEW example that teaches a novel reasoning pattern. "
-                "- If an existing example is relevant but unclear, **REVISE** it to improve its clarity and reasoning. "
-                "- If an existing example is irrelevant or weak, **REPLACE** it with a better, more targeted one. "
-    
-                "If you keep any existing examples, you **must REPRODUCE them** in your new list. "
-                "Ensure the final list is correctly formatted ('--- Example 1 ---', etc.). "
-                "This parameter's content MUST BE ONLY (AT MOST 4) EXAMPLES."
+                "Use the context of the Student's recent failure to guide your choice:\n"
+            
+                "1. **ADD (Self-Correction Strategy)**: If the student failed a problem that represents a new 'type' of reasoning, "
+                "use the **Correct Answer/Ground Truth** from the feedback to WRITE A NEW DEMONSTRATION based on that specific problem. "
+                "This effectively teaches the student how to solve the exact type of problem it just missed.\n"
+            
+                "2. **REVISE**: If an existing example uses logic similar to the failed problem but was ignored, rewrite it to make the reasoning steps more explicit.\n"
+            
+                "3. **REPLACE**: If the list is full (5 examples), drop the least relevant example to make room for the new one derived from the recent failure.\n"
+
+                "If you wish to keep any existing examples, you **must REPRODUCE them** in your new list explicitly. "
+                "Ensure the final list is correctly formatted. "
+                "This parameter's content MUST BE ONLY THE EXAMPLES."
             ),
             # This helps the Critic to focus its feedback correctly.
             instruction_to_backward_engine=(
-                "Assess this parameter's fault. Your critique MUST focus ONLY on the **quality, relevance, and educational value** of the examples. "
+                "Assess if the lack of a similar example caused the failure. "
                 "Ask yourself: "
-                "1. Is the list of examples **concise and powerful**? Does every example serve a unique purpose? "
-                "2. Is the reasoning in each example **correct and easy to follow**? "
-                "3. Could a **different or entirely new example** have been more effective at preventing the student's specific error? "
-                "Do NOT criticize this parameter for lacking general instructions."
+                "1. Did the student encounter a problem structure strictly different from the existing few-shot examples? "
+                "2. Would including a solved example similar to the current problem (Ground Truth) have helped the student mimic the correct reasoning steps? "
+                "3. Is the reasoning in the current demos too vague or skipping steps? "
+                
+                "If the answer is YES, suggest adding or refining a demonstration. "
+                "CRUCIAL: You MUST explicitly **describe the correct reasoning steps** found in the ideal solution. "
+                "Your feedback should serve as a blueprint for the new example."
             ),
             requires_opt=True,
             param_type=adal.ParameterType.PROMPT,

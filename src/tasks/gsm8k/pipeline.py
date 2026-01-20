@@ -182,10 +182,18 @@ class GSM8KTrainingPipeline(adal.AdalComponent):
         """
         Backward Loss Preparation.
         """
+
+        # We create a rich ground truth object that includes not just the
+        # final answer, but also the ideal step-by-step reasoning.
+        ground_truth_text = (
+            f"The correct final answer is: {str(sample.answer).strip()}. "
+            f"The **ideal reasoning** to reach this answer is: {sample.gold_reasoning}"
+        )
+
         # 1. Ground Truth (Parameter)
         y_gt = adal.Parameter(
             name="y_gt", 
-            data=str(sample.answer).strip(), 
+            data=ground_truth_text, 
             eval_input=str(sample.answer).strip(), 
             requires_opt=False
         )
