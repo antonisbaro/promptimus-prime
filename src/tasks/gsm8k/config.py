@@ -44,8 +44,8 @@ PROMPTS_VERBOSITY = False
 
 # NOTE: Keep these numbers small for Google Colab Free Tier (T4 GPU).
 # Increase them if running on stronger hardware (e.g., A100).
-TRAIN_SIZE = 200   # Number of samples for the optimization loop
-VAL_SIZE = 100      # Number of samples for validating new prompts during training
+TRAIN_SIZE = 50   # Number of samples for the optimization loop
+VAL_SIZE = 25      # Number of samples for validating new prompts during training
 TEST_SIZE = 200    # Number of samples for the final 'evaluate.py' report
 
 # -----------------------------------------------------------------------------
@@ -80,18 +80,18 @@ MODEL_LOAD_KWARGS = {
 # -----------------------------------------------------------------------------
 # Student Parameters:
 # - Temperature 0.0: "Deterministic" output
-# - max_new_tokens 1024: Enough space for step-by-step logic.
+# - max_new_tokens 512: Enough space for step-by-step logic.
 STUDENT_MODEL_KWARGS = {
     "temperature": 0.0,
-    "max_new_tokens": 1024,
+    "max_new_tokens": 512,
 }
 
 # Teacher Parameters:
 # - Temperature 0.8: Allows for some creativity
-# - max_new_tokens 8192: Needs space to explain the error (gradient) and rewrite the prompts.
+# - max_new_tokens 2048: Needs space to explain the error (gradient) and rewrite the prompts.
 TEACHER_MODEL_KWARGS = {
     "temperature": 0.8,
-    "max_new_tokens": 8192,
+    "max_new_tokens": 2048,
 }
 
 # In src/tasks/gsm8k/config.py
@@ -100,7 +100,7 @@ TEACHER_MODEL_KWARGS = {
 # TRAINING / OPTIMIZATION HYPERPARAMETERS
 # -----------------------------------------------------------------------------
 # Max Steps: How many optimization iterations (generations) to run.
-MAX_STEPS = 8
+MAX_STEPS = 10
 
 # -----------------------------------------------------------------------------
 # STUDENT FORWARD PASS CONFIGURATION (Per Step)
@@ -112,7 +112,7 @@ TRAIN_BATCH_SIZE = 4
 
 # Number of Workers for parallel processing during inference.
 # Keep this aligned with your hardware capabilities to avoid deadlocks.
-NUM_WORKERS = 4
+NUM_WORKERS = 1
 
 # -----------------------------------------------------------------------------
 # OPTIMIZER CONFIGURATION
@@ -125,7 +125,7 @@ OPTIMIZER_KWARGS = {
     # Controls how many of the best-performing past prompts are included
     # in the context for the Teacher. A higher number gives the Teacher more
     # historical context but significantly increases the input prompt size.
-    "max_past_history": 2,
+    "max_past_history": 1,
 
     # Controls how many recent failed proposals are shown to the Teacher.
     # This helps the Teacher avoid repeating the same mistakes. A higher
@@ -148,4 +148,4 @@ MAX_ERROR_SAMPLES = 2
 # Max Correct Samples: The maximum number of CORRECT examples to randomly sample.
 # These are included to give the Teacher context on what success looks like and
 # to prevent it from making changes that break already working patterns.
-MAX_CORRECT_SAMPLES = 2
+MAX_CORRECT_SAMPLES = 1

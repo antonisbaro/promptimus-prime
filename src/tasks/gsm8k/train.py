@@ -185,7 +185,7 @@ def run_training():
 
     trainer = adal.Trainer(
         adaltask=pipeline,
-        strategy="random", 
+        strategy="constrained", 
         max_steps=MAX_STEPS,       
         num_workers=NUM_WORKERS,
         train_batch_size=TRAIN_BATCH_SIZE,
