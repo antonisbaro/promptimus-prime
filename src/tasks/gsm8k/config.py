@@ -45,7 +45,7 @@ PROMPTS_VERBOSITY = False
 # NOTE: Keep these numbers small for Google Colab Free Tier (T4 GPU).
 # Increase them if running on stronger hardware (e.g., A100).
 TRAIN_SIZE = 50   # Number of samples for the optimization loop
-VAL_SIZE = 100      # Number of samples for validating new prompts during training
+VAL_SIZE = 50      # Number of samples for validating new prompts during training
 TEST_SIZE = 100    # Number of samples for the final 'evaluate.py' report
 
 # -----------------------------------------------------------------------------
@@ -53,7 +53,7 @@ TEST_SIZE = 100    # Number of samples for the final 'evaluate.py' report
 # -----------------------------------------------------------------------------
 # Student: The model attempting to solve the math problems.
 # We use a lightweight 1.5B model for faster iteration and low VRAM usage.
-STUDENT_MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
+STUDENT_MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
 
 # Teacher: The "Backward Engine" and "Optimizer".
 # We use a stronger 7B model to provide high-quality feedback and prompt edits.
@@ -130,7 +130,7 @@ OPTIMIZER_KWARGS = {
     # Controls how many recent failed proposals are shown to the Teacher.
     # This helps the Teacher avoid repeating the same mistakes. A higher
     # number provides more negative feedback but also increases prompt size.
-    "max_failed_proposals": 5,
+    "max_failed_proposals": 3,
 }
 
 # -----------------------------------------------------------------------------
